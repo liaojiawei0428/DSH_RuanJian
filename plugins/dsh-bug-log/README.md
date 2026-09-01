@@ -19,15 +19,16 @@ DSH 系统组件：持久化 BUG 知识库。任何会话中发现并修复的 B
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
-| `buglogDir` | `D:/GongJu/DSH-ops/buglog` | 共享记录目录（git 双机同步） |
+| `buglogDir` | 仓库内 `buglog/`（自定位：从插件位置上两级推导，任意盘符/父目录均正确） | 共享记录目录（git 双机同步）；仅当布局偏离约定时覆盖 |
 
 部署在 profile `cordis.patch.yml` 覆盖：
 
 ```yaml
+# 一般无需配置（默认自定位）；仅布局偏离约定时覆盖：
 - id: bug-log
   name: dsh-bug-log
   config:
-    buglogDir: 'D:/GongJu/DSH-ops/buglog'
+    buglogDir: '<盘符>:/DSH/DSH-ops/buglog'
 ```
 
 ## 记录纪律（强制）
@@ -39,7 +40,7 @@ DSH 系统组件：持久化 BUG 知识库。任何会话中发现并修复的 B
 ## 安装
 
 1. profile `package.json` `dependencies` 加：
-   `"dsh-bug-log": "link:D:/GongJu/DSH-ops/plugins/dsh-bug-log"`
+   `"dsh-bug-log": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-bug-log"`
 2. `dsh.profile.bundles` 数组追加 `"dsh-bug-log"`
 3. profile 目录 `pnpm install`，重启服务（预检闸门自动运行）
 

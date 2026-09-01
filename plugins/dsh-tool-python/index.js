@@ -382,8 +382,10 @@ export function apply(ctx, config = {}) {
   ctx.systemPrompt.section({
     name: 'tool:python',
     order: 104,
-    text: 'Prefer the python tool over shell pipelines for computation, data processing, text transformation, and multi-step logic: write Python code, run it, read the output. '
-      + 'Use the shell tool only for process orchestration the Python stdlib does not cover (git, pnpm, node, service management). '
+    text: 'DEFAULT TO THE PYTHON TOOL (discipline D7). Use python for all computation, data processing, log/text file reading and writing, JSON/CSV parsing, multi-step logic, and throwaway drill scripts: write Python code, run it, read the output. '
+      + 'Reserve the shell (pwsh) tool for its whitelist ONLY: Windows system objects (services, processes, ports, WMI, registry), process orchestration (git, pnpm, node, installers), and running .ps1 scripts. '
+      + 'Anti-examples — do these in python, NOT with pwsh: reading a log file (Get-Content), editing a JSON config (ConvertFrom-Json), searching text (Select-String), polling a port or file in a loop. '
+      + 'For DSH status checks run `python health-check.py` in DSH-ops instead of hand-writing pwsh. '
       + 'Non-zero python exits are reported as `[exit code: N]` markers; investigate failures before moving on.',
   })
 
@@ -415,7 +417,11 @@ export function apply(ctx, config = {}) {
       await writeFile(scriptPath, args.code, 'utf8')
       try {
         const argv = [psSingleQuoted(pythonPath), psSingleQuoted(scriptPath), ...(args.args ?? []).map(psSingleQuoted)]
-        const command = `${UTF8_ENV_PREAMBLE}& ${argv.join(' ')}`
+        // `exit $LASTEXITCODE` is load-bearing: pwsh -Command does NOT
+        // propagate a trailing native command's exit code (it collapses any
+        // non-zero value to 1), so without this the model never sees the
+        // script's real exit status. Explicit `exit N` does propagate.
+        const command = `${UTF8_ENV_PREAMBLE}& ${argv.join(' ')}; exit $LASTEXITCODE`
         // shellEnv is optional: without it the managed DSH_* facts are simply
         // omitted, which never justifies blocking the plugin row at load.
         const shellEnv = ctx.get('shellEnv')

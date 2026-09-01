@@ -9,6 +9,12 @@
  * This file is a hand-written client bundle in the platform's module-loader
  * format: `window.__ModuleLoader__.load({ id, factory })`, with the factory's
  * `require` resolving platform seed words (react, @deepseek-ai/cordis, …).
+ *
+ * Since DSH 0.1.2 the boot mounts every client plugin's apply concurrently, so
+ * the module must declare `inject: ['slots']` — the loader holds our apply
+ * until the slots service is provided. Without the declaration our apply ran
+ * before slots existed and `ctx.get('slots')` returned undefined (silently
+ * dropping both capsules).
  */
 window.__ModuleLoader__.load({
   id: 'dsh-deepseek-balance',
@@ -200,7 +206,10 @@ window.__ModuleLoader__.load({
     /** Browser-half entry: register the capsules into the header utilities row. */
     function apply(ctx) {
       const slots = ctx.get('slots')
-      if (slots === undefined) return
+      if (slots === undefined) {
+        console.warn('[dsh-deepseek-balance] slots service unavailable despite inject declaration; capsules not registered')
+        return
+      }
 
       const tag = document.createElement('style')
       tag.dataset.plugin = 'dsh-deepseek-balance'
@@ -218,6 +227,7 @@ window.__ModuleLoader__.load({
       ))
     }
 
+    exports.inject = ['slots']
     exports.apply = apply
     return module.exports
   },

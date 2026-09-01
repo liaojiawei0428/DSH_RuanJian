@@ -172,7 +172,15 @@ try {
   # 5. 重新构建（lib + web）。
   Write-Both '构建中 (pnpm run build, 约 2-5 分钟, 请勿关闭窗口)...'
   pnpm run build
-  if ($LASTEXITCODE -ne 0) { throw 'pnpm run build 失败' }
+  if ($LASTEXITCODE -ne 0) {
+    # 跨"官方删除包/文件"的提交升级时, git pull 不清理已删包的旧 lib 产物,
+    # tsc 增量编译会留下孤儿文件, 让 tsdown 报 MISSING_EXPORT。自愈: 全量清理后重建一次。
+    Write-Both '构建失败, 疑似旧构建产物残留, pnpm run clean 后重试一次...'
+    pnpm run clean
+    if ($LASTEXITCODE -ne 0) { throw 'pnpm run clean 失败' }
+    pnpm run build
+    if ($LASTEXITCODE -ne 0) { throw 'pnpm run build 失败 (clean 重试后仍失败, 见上方输出)' }
+  }
   Write-Both '构建完成 OK'
 } catch {
   Write-Both "构建阶段失败: $($_.Exception.Message)"
@@ -255,7 +263,9 @@ $healthy = $false
 $deadline = (Get-Date).AddSeconds(120)
 while ((Get-Date) -lt $deadline) {
   try {
-    $resp = Invoke-WebRequest -Uri 'http://127.0.0.1:3080' -UseBasicParsing -TimeoutSec 5
+    # 回环目标必须绕过系统代理：代理对 127.0.0.1 返回 502 时，
+    # 就绪的服务会被误判为未就绪，每次升级都以假失败告终。
+    $resp = Invoke-WebRequest -Uri 'http://127.0.0.1:3080' -UseBasicParsing -TimeoutSec 5 -NoProxy
     if ($resp.StatusCode -lt 500) { $healthy = $true; break }
   } catch { Start-Sleep -Seconds 3 }
 }

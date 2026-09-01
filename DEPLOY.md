@@ -86,10 +86,13 @@ node apps\cli\lib\bin.js --version   # 应输出 0.1.x-rc.x（与克隆时的官
   "name": "dsh-profile-web",
   "private": true,
   "dependencies": {
+    "dsh-bug-log": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-bug-log",
     "dsh-deepseek-balance": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-deepseek-balance",
     "dsh-locale-language": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-locale-language",
-    "dsh-tool-python": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-tool-python",
-    "dsh-bug-log": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-bug-log"
+    "dsh-personal-hub": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-personal-hub",
+    "dsh-plugin-guide": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-plugin-guide",
+    "dsh-restart-resume": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-restart-resume",
+    "dsh-tool-python": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-tool-python"
   },
   "dsh": {
     "profile": {
@@ -99,7 +102,10 @@ node apps\cli\lib\bin.js --version   # 应输出 0.1.x-rc.x（与克隆时的官
         "dsh-locale-language",
         "dsh-deepseek-balance",
         "dsh-tool-python",
-        "dsh-bug-log"
+        "dsh-bug-log",
+        "dsh-personal-hub",
+        "dsh-plugin-guide",
+        "dsh-restart-resume"
       ]
     }
   }
@@ -137,6 +143,42 @@ cd %USERPROFILE%\.dsh\profiles\web
 pnpm install
 ```
 
+### 第 3b 步：生成 headless profile（可选，推荐）
+
+headless 模式（`pnpm dsh --profile headless "任务"`）使用独立 composition。
+不部署则 headless 会话只有官方插件（无 buglog 工具、无 D7 规则注入）。
+
+创建目录 `%USERPROFILE%\.dsh\profiles\headless\`，写入 `package.json`
+（7 个自研插件中 3 个纯 host 侧插件；web 专用插件不进 headless）：
+
+```json
+{
+  "name": "dsh-profile-headless",
+  "private": true,
+  "dependencies": {
+    "dsh-bug-log": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-bug-log",
+    "dsh-locale-language": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-locale-language",
+    "dsh-tool-python": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-tool-python"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@deepseek-ai/dsh-headless",
+        "dsh-bug-log",
+        "dsh-locale-language",
+        "dsh-tool-python"
+      ]
+    }
+  }
+}
+```
+
+```powershell
+cd %USERPROFILE%\.dsh\profiles\headless
+pnpm install
+```
+
 ---
 
 ## 第 4 步：用户配置
@@ -147,6 +189,27 @@ pnpm install
 # 首次执行会创建 %USERPROFILE%\.dsh\
 Copy-Item <盘符>:\DSH\DSH-ops\config\settings.yaml %USERPROFILE%\.dsh\settings.yaml
 ```
+
+**用户全局规则底座**（所有会话注入的硬规则，仓库已备模板）：
+
+```powershell
+Copy-Item <盘符>:\DSH\DSH-ops\config\AGENTS-global-template.md %USERPROFILE%\.dsh\AGENTS.md
+# 然后编辑该文件：把 <盘符> 替换为实际盘符；pwsh/python 实际安装位有偏离时一并修正
+```
+
+> 缺这步：新机所有会话将没有 D7 工具分工与服务纪律注入（模型默认乱用 pwsh）。
+
+**personal-hub 权威清单**（`personal-hub/personal.json`，git 内含开发机路径，新机必须改）：
+
+| 字段 | 开发机值 | 新机改法 |
+|---|---|---|
+| `profileDir` | `C:/Users/Administrator/.dsh/profiles/web` | 用户名换成新机 Windows 用户 |
+| `pluginsDir` | `E:/DSH/DSH-ops/plugins` | 盘符/父目录换成新机实际 |
+| `plugins[].patch.config.pythonPath` | 本机 Python 3.14 绝对路径 | **整块删掉** `config`（走解释器自动发现），或改为新机实际路径 |
+| `extraPatches[].config.pwshPath` | `E:\GongJu\7\pwsh.exe` | 标准安装改 `C:\Program Files\PowerShell\7\pwsh.exe`，便携位改实际路径 |
+
+> 不改的后果：`personal_hub_status` 校验直接报错（profileDir 不存在，fail-loud 不会静默错写），
+> `personal_hub_reapply` 拒绝运行。改对后该清单成为新机的 profile 权威来源。
 
 **API 密钥**（含密钥，永不入 git，每机独立）：
 
@@ -171,11 +234,12 @@ refs:
 ```powershell
 # 1. 插件闸门（重启前必跑）
 node <盘符>:\DSH\DSH-ops\validate-plugins.mjs
-# 期望: 4 个插件全部 PASS
+# 期望: 7 个插件全部 PASS
 
 # 2. 组合树
 node <盘符>:\DSH\Deepseek_DSH\apps\cli\lib\bin.js --profile web --dump-config
-# 期望: 出现 pwsh-sandbox / locale-language / deepseek-balance / tool-python / bug-log 行
+# 期望: 出现 pwsh-sandbox / locale-language / deepseek-balance / tool-python /
+#       bug-log / personal-hub / plugin-guide / restart-resume 行
 
 # 3. 启动
 <盘符>:\DSH\DSH-ops\启动DSH.bat
@@ -186,8 +250,8 @@ node <盘符>:\DSH\Deepseek_DSH\apps\cli\lib\bin.js --profile web --dump-config
 
 - 会话头部出现 **余额胶囊** 与 **版本胶囊**（版本号与克隆源一致，不写死）
 - 悬停版本胶囊：`本地提交` 与 `官方最新` 一致（发布节奏不同时属正常；用 `更新DSH.bat` 对齐）
-- 模型工具列表含 `python`、`bug_report`、`bug_search`、`bug_stats`
-- `http://127.0.0.1:3080/api/dsh/repo-status` 返回 `{"version":"0.1.x-rc.x",...}`
+- 模型工具列表含 `python`、`bug_report`、`bug_search`、`bug_stats`、`personal_hub_status`、`request_restart`
+- `http://127.0.0.1:3080/api/dsh/repo-status` 返回 `{"version":"0.1.x-...",...}`
 
 ---
 
@@ -220,3 +284,7 @@ node <盘符>:\DSH\Deepseek_DSH\apps\cli\lib\bin.js --profile web --dump-config
 - 2026-08-18：按本指南在 `E:\DSH` 完整模拟部署验证通过（clone→build→profile→配置→启动→路由验证→清理）。
   发现并修复：`validate-plugins.mjs`/`disable-plugin.mjs` 硬编码用户路径（已改动态解析）；
   补 settings.yaml 复制步骤；淘汰旧部署脚本（setup.ps1 / 安装DSH.bat / DEPLOY.txt / README.txt）。
+- 2026-09-01：部署可复制性审计。web profile 模板 4→7 插件（补 personal-hub / plugin-guide / restart-resume）；
+  新增第 3b 步 headless profile；第 4 步新增用户全局规则底座（`config/AGENTS-global-template.md` →
+  `%USERPROFILE%\.dsh\AGENTS.md`）；修正 PLUGIN-STANDARD.md 与 dsh-bug-log README 残留旧机路径
+  `D:/GongJu` 为部署占位（脚本与插件代码经全仓扫描确认零硬盘符，全自定位）。

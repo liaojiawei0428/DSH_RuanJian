@@ -4,7 +4,7 @@
 
 底线（违反任何一条即视为事故）：
 
-1. **坏插件不得阻断 DSH 启动**——任何插件缺陷必须能被预检闸门在重启前拦截，或在紧急情况下可一键摘除。
+1. **坏插件不得阻断 DSH 启动**——三层防线保证：预检闸门在重启前拦截（G1–G2）；漏网坏插件导致启动失败时启动链**自动隔离肇事插件并重试**（G3）；紧急情况可一键摘除（R4）。任何情况下 DSH 必须能正常启动运行。
 2. **旧服务器不受更新过程影响**——所有检查通过之前，不得杀死正在运行的服务器。
 3. **用户数据零损坏**——凭据、设置、profile 修改前必须备份，写入必须整体原子替换。
 
@@ -16,6 +16,11 @@
 | 2026-08-18 凭据文件损坏 | `Set-Content -NoNewline` 把行数组无分隔拼接成非法 YAML，凭据插件 fail-loud，进程起不来 | D4：用户数据文件整体原子重写，禁止行级拼接 |
 | 2026-08-18 BOM 乱码 | 编辑工具剥掉 .ps1 的 UTF-8 BOM，PowerShell 5.1 按 GBK 解析中文导致语法错误 | D5：.ps1 恒为 UTF-8 带 BOM；启动链恒用 pwsh 7 |
 | 2026-08-18 13:05 启动阻断 | 插件 output schema 把 `required: true` 写进属性内部，违反核心 JSON Schema 方言，`assertSupportedJsonSchema` 抛错，插件树加载失败 | P4 + 预检闸门：注册路径必须在重启前经过真实核心校验器执行 |
+| 2026-08-31 inject 漏声明 | `ctx.tools` 未在 `inject` 声明，真实 loader 抛 `cannot get property "tools" without inject` 拒绝启动；闸门 mock 无守卫放行（stub 绿、运行时红） | G1：闸门用 Proxy 复刻 inject 守卫，报错与运行时逐字一致 |
+| 2026-08-31 演练半安装 | 演练插件 link 进 profile 但未 `pnpm install` 即重启，`resolveBundleDir` 失败停机；闸门不验 install 状态照样全绿，兜底定位器不认识 resolve 失败格式 | G2：闸门增查 node_modules 符号链接；G3：定位器补第三模式并在失败时输出 err.log 原文；G4：演练必须完整走 S3 |
+| 2026-08-31 演练残留三连 | 演练插件手写骨架漏 `dsh.bundle` 声明，boot 在 loadProfile fail-loud（`declares no dsh.bundle`）3 次全灭停机；闸门不查声明、兜底不识该格式 | G1 第 6 项：dsh.bundle 声明与补丁在盘；G3：定位器补第四格式；G4：演练插件 manifest 必须完整 |
+| 2026-08-31 端口后延迟崩溃 | bad4（setImmediate 异步崩）闸门八项全绿、端口曾就绪，启动器判成功退出后服务静默死亡，G3 从未触发——"3 次失败"前提不成立 | G3：就绪后 2 秒存活复核（崩溃计入失败）；G1 第 8 项：演练保留区名直接拒绝（DSH_DRILL=1 显式旁路）；新增 G5 运行期看门狗 |
+| 2026-08-31 看门狗 pwsh 路径 | 看门狗与 WMI 拉起把 pwsh 写死为 `C:\Program Files\PowerShell\7`，本机装在 `E:\GongJu\7` → ReturnValue 9 恒失败，服务死亡无人接管 | 两脚本加 `Resolve-PwshPath`（DSH_PWSH_PATH → PATH → Program Files，与 restart-resume 同一定位链）；新脚本引用 pwsh 一律用定位链，禁止写死 |
 
 ## 第一部分：插件开发规范（P1–P10）
 
@@ -71,15 +76,15 @@
 ## 第二部分：新插件开发流程（S1–S5）
 
 ```
-S1  node D:/GongJu/DSH-ops/new-plugin.mjs dsh-<role>
+S1  node <盘符>:/DSH/DSH-ops/new-plugin.mjs dsh-<role>
     —— 脚手架产出合规骨架（结构、insert 方言补丁、README）
 
 S2  开发 index.js，遵守 P1–P10
-    —— 随时验证：node D:/GongJu/DSH-ops/validate-plugins.mjs
+    —— 随时验证：node <盘符>:/DSH/DSH-ops/validate-plugins.mjs
     —— 全绿才能进入安装；红就修，不许带病安装
 
 S3  安装三步（写入 profile）：
-    1. profile package.json dependencies 加 "dsh-<role>": "link:D:/GongJu/DSH-ops/plugins/dsh-<role>"
+    1. profile package.json dependencies 加 "dsh-<role>": "link:<盘符>:/DSH/DSH-ops/plugins/dsh-<role>"
     2. dsh.profile.bundles 数组追加 "dsh-<role>"
     3. profile 目录 pnpm install
 
@@ -97,16 +102,62 @@ S5  验证：
 R1  定位：看 C:/Users/<u>/.dsh/restart-dsh-web.log 与 dsh-web-stderr.log
     —— 闸门输出（plugins: 行）与服务器崩溃栈都在这里
 
-R2  复现：node D:/GongJu/DSH-ops/validate-plugins.mjs
+R2  复现：node <盘符>:/DSH/DSH-ops/validate-plugins.mjs
     —— FAIL 行给出插件名与精确原因（与生产校验器同一实现，错误逐字一致）
 
 R3  修复 → 闸门全绿 → 重启
 
 R4  紧急逃生（插件一时修不好，DSH 必须立即可用）：
-    node D:/GongJu/DSH-ops/disable-plugin.mjs dsh-<role>
+    node <盘符>:/DSH/DSH-ops/disable-plugin.mjs dsh-<role>
     —— 只从 dsh.profile.bundles 移除该插件；文件与 link 原样保留
     —— 重启后 DSH 干净启动；修复后把名字加回 bundles 数组即恢复
 ```
+
+## 第三点五部分：闸门与启动保险（G1–G4）
+
+底线 1 的机制化。闸门是**唯一权威的准入检查**——所有自研插件无论好坏，都必须先过它；启动保险兜住闸门拦不住的残余风险。
+
+**G1 闸门检查范围**（`node validate-plugins.mjs`，一条命令八项全查）：
+
+1. 模块可导入（`import` 真实执行入口文件）且导出 `apply()` 函数；
+2. `apply()` 同步执行一遍（真实 `ctx.effect`/`ctx.on` + **Proxy 复刻的 inject 守卫**——访问未在 `inject` 声明的服务会报与 Cordis 运行时逐字一致的 `cannot get property ... without inject`；框架内置 `get`/`effect`/`on`/`logger` 免声明）；
+3. 工具 output schema 用**真实核心** `assertSupportedJsonSchema` 校验方言；
+4. client 入口 `node --check` 语法解析；
+5. manifest 声明的 exports 文件在磁盘存在；
+6. **`dsh.bundle.patch` 声明与补丁文件在盘**——生产 boot 的 loadProfile 对缺失声明 fail-loud（`declares no dsh.bundle`）且 `loadOverlayPatches` 读不到补丁文件即崩（2026-08-31 演练残留事故：闸门曾 8/8 全绿放行、服务停机）；
+7. **安装状态**（G2）；
+8. **演练名称保留区**（G4）：名字命中 `dsh-gate-demo-*` / `gate-demo-*` 的 link 直接拒绝——演练插件按纪律不得留在 bundles（2026-08-31 bad2/bad3/bad4 三次残留三次停机）。显式设置环境变量 `DSH_DRILL=1` 时放行并打印 WARN——启动链的任何自动路径都不设该变量，演练只能由人/受监督的会话主动开启。
+
+闸门只校验 `dsh.profile.bundles` 内的 link 插件；被 `disable-plugin.mjs` 摘除（不在 bundles）的插件输出 `SKIP` 行——它不会加载，不必也不应拦住闸门，自动隔离的重试轮正依赖这一点转绿。
+
+**G2 安装状态检查**：profile `node_modules/<插件名>` 符号链接必须存在——link 只写进 `dependencies`+`bundles` 而**没跑 `pnpm install`** 的"半安装"插件，真实服务经 node_modules 解析必然 `cannot resolve profile bundle` 失败（2026-08-31 演练事故：闸门曾全绿放行、服务停机）。闸门直接读 `link.dir` 文件，永远看不出缺 symlink，所以此项必须单查。FAIL 文案自带修复命令（profile 目录 `pnpm install`）。该检查仅在 profile 已有 `node_modules` 目录时启用（全新/临时 profile 无法判定）。
+
+**G3 启动自动隔离兜底**（`start-dsh-web.ps1` 内置）：闸门拦不住运行期才炸的插件（如 `setImmediate` 异步抛错——闸门只执行同步注册路径）。若 3 次启动尝试全灭：
+
+1. 从 `dsh-web.err.log` 尾部定位肇事插件（四种格式：`failed to apply loader entry X (dsh-xxx)`；`cannot resolve profile bundle`；`profile bundle "dsh-xxx" declares no dsh.bundle`；异常栈中的 `plugins/dsh-xxx/` 路径）；
+2. 定位到 → 自动 `disable-plugin.mjs` 摘出 bundles（文件与 link 保留）→ **自动重试一轮**（只隔离一次，防误判连环摘）；
+3. 定位不到 → 输出 err.log 最后几行原文，转人工。
+
+每次尝试端口就绪后还有**存活复核**：睡 2 秒复查监听仍在——`setImmediate` 类异步崩溃发生在端口绑定**之后**，若按"端口在听"判成功，坏插件逃过 G3、服务随后静默死亡（2026-08-31 bad4 事故）。复核失败的尝试计入失败，三次后照常走兜底。
+
+闸门在启动链中的位置：单实例检查之后、`-Restart` 停止动作**之前**——闸门红 = 直接中止，旧服务零影响（闸门若排在停止之后，坏插件会先杀服务再中止，变成停机）。
+
+**G4 演练纪律**（故障注入演练 = 主动制造坏插件验证防线）：
+
+- 演练必须**完整走 S3**：link + bundles + `pnpm install` 三步一个不少（半安装事故的直接教训）；
+- 演练插件必须用**保留区命名**（`dsh-gate-demo-*` / `gate-demo-*`）——闸门对保留区名字直接拒绝（G1 第 8 项），演练残留不可能留在 bundles 里造成停机（2026-08-31 bad2/bad3/bad4 三次残留三次停机的根治）；演练结束后**必须**删除插件目录并清理 profile。演练**进行中**用 `$env:DSH_DRILL='1'` 显式放行闸门保留区检查——只在该会话设置，启动链任何自动路径（含看门狗拉起）都不携带，`Ensure-Watchdog` 还会主动清除以防泄漏；
+- 演练插件的 manifest 必须**完整**（含 `dsh.bundle.patch` 声明与补丁文件在盘）——手写最小骨架漏字段会让演练死在 boot 的 loadProfile 而不是目标防线（2026-08-31 gate-demo-bad3 事故）；拿不准就 `new-plugin.mjs` 脚手架起步再注入缺陷；
+- 演练结束立即清理：删插件目录 + 摘 link（依赖项），并确认闸门恢复全绿；
+- 演练用 `-Restart` 真实执行才有验证价值，但必须预期停机窗口（3×30 秒轮询 + 兜底重试）；
+- 每次演练暴露的防线缺口（如本次的 inject 守卫、install 检查）修复后必须回归 `test-standard.mjs` 并落 buglog。
+
+**G5 运行期看门狗**（`watchdog-dsh.ps1`，第四层防线）：启动器的存活复核只覆盖启动后 2 秒，坏插件可能在**任意延迟**后才崩（首次调用某工具、定时器、内存耗尽）——届时启动器早已退出、G3 无从触发。看门狗接管运行期：
+
+- 启动器每个**成功路径**（含"已在运行"）调 `Ensure-Watchdog` 拉起独立看门狗（WMI 独立进程，不受 Job 对象管辖；自带单实例保护）；
+- 每 30 秒查 3080 端口，**连续 2 个周期无监听**才认定死亡（60 秒去抖，滤掉 `-Restart` 的正常端口空窗）；
+- 死亡确认 → 与 G3 同款定位器找肇事插件 → 定位到则自动 `disable-plugin.mjs` 隔离 → WMI 拉起完整启动链（幂等语义直接启动），本实例退出让位（新启动器拉起新看门狗）；
+- **防循环护栏**：拉起记录保留 1 小时窗口，窗口内已拉起 3 次仍不稳定 → 停止自动恢复、转人工（防"拉起又崩"无限重启机）；
+- pwsh 路径一律 `Resolve-PwshPath` 定位链（`DSH_PWSH_PATH` → PATH → Program Files），**禁止写死**（2026-08-31 写死 `C:\Program Files\PowerShell\7` 事故：本机装在 `E:\GongJu\7`，WMI ReturnValue 9 恒失败，看门狗从未上岗）。
 
 ## 第四部分：DSH 改动规范（D1–D6）
 
@@ -122,23 +173,27 @@ R4  紧急逃生（插件一时修不好，DSH 必须立即可用）：
 
 **D6 提交纪律**：DSH-ops 的改动审阅后入库；备份目录含密钥，**永不入库**。
 
+**D7 工具分工纪律**：AI 默认用 `python` 工具——计算、数据处理、日志与文本读写、JSON、多步逻辑、演练脚本；PowerShell 仅限白名单场景——Windows 系统对象（服务/进程/端口/WMI/注册表）、`git`/`pnpm`/`node` 进程编排、执行 `.ps1` 脚本本身。判据：操作对象是**数据**用 python，是**系统对象或外部进程**用 pwsh。依据（2026-08-31 实测）：pwsh 有结构性风险（`-Command` 不传播原生命令退出码、OEM 编码坑、隐式格式化截列、三套引号转义），python 显式哲学 + 训练语料优势正确率更高；高频体检操作已沉淀为 `health-check.py`，"查状态"类任务默认 python 一发完成。
+
 ## 工具索引
 
 | 工具 | 作用 |
 |---|---|
 | `new-plugin.mjs` | 脚手架：产出合规骨架，从源头保证结构正确 |
-| `validate-plugins.mjs` | 预检闸门：真实核心校验器执行每个 link 插件的注册路径 + client 语法检查 |
-| `disable-plugin.mjs` | 紧急摘除：一键把坏插件移出加载列表，文件与 link 保留 |
+| `validate-plugins.mjs` | 预检闸门：八项检查（G1/G2）——注册路径真实执行（含 inject 守卫）、schema 方言、client 语法、exports 在盘、dsh.bundle 声明与补丁在盘、安装状态、演练保留区 |
+| `disable-plugin.mjs` | 紧急摘除（R4）+ 自动隔离（G3）共用：把坏插件移出加载列表，文件与 link 保留 |
 | `test-standard.mjs` | 验收测试：T1–T4 证明脚手架合规、闸门拦截力、逃生通道可用 |
 | `update-dsh.ps1` | 主仓库更新：全链路守卫（D3） |
-| `start-dsh-web.ps1` / `restart-dsh-web.ps1` | 启动/重启：均先过闸门再动手 |
+| `start-dsh-web.ps1` / `restart-dsh-web.ps1` | 启动/重启：先过闸门再动手；三次失败自动隔离肇事插件并重试一轮（G3） |
+| `watchdog-dsh.ps1` | 运行期看门狗（G5）：30s×2 去抖 → err.log 定位 → 隔离 → WMI 拉起；带心跳文件与 finally 黑匣子（死亡现场判据） |
+| `health-check.py` | 一键体检（D7 默认入口）：服务/看门狗/日志/bundles/闸门/回归；看门狗不在岗自动 WMI 复活 |
 
 **闸门自身故障的排查**：闸门从 `DSH_TOOLS_LIB`（默认主仓库构建产物 `packages/core/tools/lib/index.js`）导入真实校验器，导入失败时闸门整体报错、按 fail-closed 中止重启。主仓库重构导致该路径变动时，设置环境变量 `DSH_TOOLS_LIB` 指向新位置即可，无需改插件或放行。
 
 ## 提交前检查清单（复制执行）
 
 ```
-[ ] node D:/GongJu/DSH-ops/validate-plugins.mjs  全绿
+[ ] node <盘符>:/DSH/DSH-ops/validate-plugins.mjs  全绿
 [ ] dump-config 组合树含新插件行
 [ ] README 五节齐全（工作方式/配置/安装/验证/已知边界）
 [ ] package.json: private + type:module + exports + dsh.bundle.patch
@@ -146,6 +201,7 @@ R4  紧急逃生（插件一时修不好，DSH 必须立即可用）：
 [ ] schema: required 全在父对象数组；属性内无 required；oneOf 旁无 required
 [ ] .ps1 若有改动：语法 OK + BOM 在位 + 无 powershell.exe
 [ ] 用户数据文件：已备份；整体原子写入
+[ ] 若做过演练：插件目录已删、link 已摘、闸门恢复全绿（G4）
 ```
 
 ---

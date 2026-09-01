@@ -18,7 +18,10 @@
  *   3. every ctx.tools.register() definition passes the core
  *      assertSupportedJsonSchema on its output schema — the exact validator
  *      production runs;
- *   4. every file the package's `exports` map declares exists on disk.
+ *   4. every file the package's `exports` map declares exists on disk;
+ *   5. the package declares `dsh.bundle.patch` and the patch file exists —
+ *      production boot fails loud with "declares no dsh.bundle" when the
+ *      manifest lacks it (2026-08-31 演练残留事故: gate green, boot dead);
  *
  * Exit 0 = all plugins safe to load; exit 1 = at least one failure, with the
  * per-plugin reason printed and nothing mutated anywhere.
@@ -67,32 +70,24 @@ function declaredExportFiles(manifest) {
 }
 
 /** Build the mock host context that records registrations and validates tools.
+ *
+ * The mock REPLICATES the Cordis inject guard: at runtime, accessing
+ * `ctx.<service>` without declaring that service in the plugin's `inject`
+ * array throws "cannot get property '<name>' without inject" and fails the
+ * whole loader (server dies before binding its port). The original mock used
+ * plain properties, so an inject violation passed the gate and only exploded
+ * at server load — the 2026-08-31 restart-resume incident. Framework builtins
+ * (get/effect/on/logger) never require declaration.
+ *
  * @param assertSchema - the real assertSupportedJsonSchema from the core.
+ * @param injectNames - services the plugin declares in `export const inject`.
  * @returns a mock ctx plus the collected section/tool records.
  */
-function mockContext(assertSchema) {
+function mockContext(assertSchema, injectNames) {
   const records = { sections: [], tools: [], routes: [], contexts: [], events: [] }
-  const ctx = {
+  const declared = new Set(injectNames)
+  const services = {
     shell: { sandboxMode: undefined, resolve: request => request, run: async () => { throw new Error('mock: not executed') } },
-    get(_name) { return undefined },
-    // The registration-time effect idiom (host halves wrap route/subscription
-    // registrations in ctx.effect(() => disposer)); the mock invokes the body
-    // once and discards the disposer — nothing real is mounted.
-    effect(body) {
-      const dispose = body()
-      return typeof dispose === 'function' ? dispose : () => {}
-    },
-    // Event subscriptions (ctx.on returns the Cordis disposer); the mock
-    // records the event name and never fires.
-    on(event) {
-      records.events.push(event)
-      return () => {}
-    },
-    webServer: { register: route => { records.routes.push(route.path) } },
-    systemPrompt: {
-      section: section => { records.sections.push(section) },
-      context: provider => { records.contexts.push(provider) },
-    },
     tools: {
       register: definition => {
         const output = definition.output
@@ -107,7 +102,44 @@ function mockContext(assertSchema) {
         records.tools.push(definition.name)
       },
     },
+    webServer: { register: route => { records.routes.push(route.path) } },
+    systemPrompt: {
+      section: section => { records.sections.push(section) },
+      context: provider => { records.contexts.push(provider) },
+    },
+    // Declared-but-unimplemented services resolve to undefined, mirroring a
+    // service that is not mounted in this reduced environment; plugins must
+    // already tolerate that at runtime (the ctx.get pattern).
+    sessionController: undefined,
   }
+  const ctx = new Proxy({}, {
+    get(_target, prop) {
+      const name = String(prop)
+      if (name === 'get') return _serviceName => undefined
+      if (name === 'effect') {
+        // The registration-time effect idiom (host halves wrap route/
+        // subscription registrations in ctx.effect(() => disposer)); the mock
+        // invokes the body once and discards the disposer — nothing real is
+        // mounted.
+        return body => {
+          const dispose = body()
+          return typeof dispose === 'function' ? dispose : () => {}
+        }
+      }
+      if (name === 'on') {
+        // Event subscriptions return the Cordis disposer; never fired here.
+        return event => {
+          records.events.push(event)
+          return () => {}
+        }
+      }
+      if (name === 'logger') return { error() {}, warn() {}, info() {} }
+      if (!declared.has(name)) {
+        throw new Error(`cannot get property '${name}' without inject`)
+      }
+      return services[name]
+    },
+  })
   return { ctx, records }
 }
 
@@ -139,17 +171,57 @@ try {
 const profilePath = resolve(PROFILE_DIR)
 const manifestPath = join(profilePath, 'package.json')
 const manifest = JSON.parse(await readFile(manifestPath, 'utf8'))
+// Validate exactly the set the server will load: plugins linked in
+// dependencies but removed from dsh.profile.bundles (disable-plugin.mjs /
+// auto-isolation) do not load, so they must not keep the gate red — the
+// startup fallback relies on the gate going green right after an isolation.
+const bundles = manifest.dsh?.profile?.bundles
 const links = Object.entries(manifest.dependencies ?? {})
   .filter(([, spec]) => typeof spec === 'string' && spec.startsWith('link:'))
   .map(([name, spec]) => ({ name, dir: spec.slice('link:'.length) }))
+  .filter(link => {
+    if (Array.isArray(bundles) && !bundles.includes(link.name)) {
+      console.log(`SKIP ${link.name}: disabled (not in dsh.profile.bundles) — not loaded, not validated`)
+      return false
+    }
+    return true
+  })
 
 if (links.length === 0) {
-  console.log('validate-plugins: no linked plugins declared; nothing to check')
+  console.log('validate-plugins: no active linked plugins declared; nothing to check')
   process.exit(0)
+}
+
+// Per-link install checks are only meaningful once the profile has been
+// installed at least once: a profile without node_modules at all (throwaway
+// test profiles) cannot have its per-plugin symlinks judged. Production
+// profiles always have the directory, so the half-install case stays covered.
+let profileInstalled = true
+try {
+  await access(join(profilePath, 'node_modules'))
+} catch {
+  profileInstalled = false
 }
 
 let failed = 0
 for (const link of links) {
+  // G4 drill reserve: fault-injection drill plugins (gate-demo-badN) must
+  // never stay in the production bundle list — drills have repeatedly been
+  // left installed and each one took DSH down (2026-08-31 bad2/bad3/bad4).
+  // Reject by name before any other check so a leftover drill cannot hide
+  // behind an otherwise-compliant package. DSH_DRILL=1 is the explicit drill
+  // opt-in: the launcher does NOT set it in any automatic path, so a drill
+  // can only pass the gate when a human/AI deliberately exports it for the
+  // duration of a supervised drill.
+  if (/^dsh-gate-demo-/i.test(link.name) || /^gate-demo-/i.test(link.name)) {
+    if (process.env.DSH_DRILL === '1') {
+      console.log(`WARN ${link.name}: drill mode (DSH_DRILL=1) — reserve-name bypass active; NEVER set DSH_DRILL outside a supervised drill (G4)`)
+    } else {
+      failed += 1
+      console.error(`FAIL ${link.name}: drill-reserve name — fault-injection drill plugins must not stay in dsh.profile.bundles; remove the link and clean up the drill (G4)`)
+      continue
+    }
+  }
   const pluginManifestPath = join(link.dir, 'package.json')
   let pluginManifest
   try {
@@ -157,6 +229,27 @@ for (const link of links) {
   } catch (error) {
     failed += 1
     console.error(`FAIL ${link.name}: cannot read ${pluginManifestPath}: ${error.message}`)
+    continue
+  }
+
+  // The production boot resolves each bundle to its patch layer through
+  // package.json `dsh.bundle.patch` (app-boot loadProfile) and fails loud with
+  // "declares no dsh.bundle" when the declaration is missing — a bundle-less
+  // package in the list is a misconfiguration, not "no patches". The gate
+  // mirrors that check so the drill/residue class (link added to the profile
+  // but manifest lacking the bundle declaration) is rejected before restart
+  // instead of after the third attempt.
+  const bundlePatch = pluginManifest.dsh?.bundle?.patch
+  if (typeof bundlePatch !== 'string' || bundlePatch.length === 0) {
+    failed += 1
+    console.error(`FAIL ${link.name}: declares no dsh.bundle.patch in its package.json — boot dies with "declares no dsh.bundle"; add "dsh": { "bundle": { "patch": "./cordis.patch.yml" } }`)
+    continue
+  }
+  try {
+    await access(join(link.dir, bundlePatch))
+  } catch {
+    failed += 1
+    console.error(`FAIL ${link.name}: dsh.bundle.patch file ${bundlePatch} missing on disk — boot dies in loadOverlayPatches`)
     continue
   }
 
@@ -176,6 +269,22 @@ for (const link of links) {
     continue
   }
 
+  // The link must be materialized by pnpm install (node_modules/<name> in the
+  // profile): the server resolves bundles through that symlink, and when it
+  // is missing startup dies with "cannot resolve profile bundle" even though
+  // every file exists at link.dir. The gate reads link.dir directly and would
+  // otherwise pass a half-installed plugin (2026-08-31 演练事故: gate green,
+  // server dead until manual cleanup).
+  if (profileInstalled) {
+    try {
+      await access(join(profilePath, 'node_modules', link.name))
+    } catch {
+      failed += 1
+      console.error(`FAIL ${link.name}: link not installed — profile node_modules/${link.name} is missing; run pnpm install in the profile directory (or personal_hub_reapply) before restart`)
+      continue
+    }
+  }
+
   const entry = pluginManifest.main ?? 'index.js'
   const entryUrl = pathToFileURL(join(link.dir, entry)).href
   try {
@@ -183,7 +292,10 @@ for (const link of links) {
     if (typeof module.apply !== 'function') {
       throw new Error('module does not export an apply() function')
     }
-    const { ctx, records } = mockContext(assertSupportedJsonSchema)
+    const injectNames = Array.isArray(module.inject)
+      ? module.inject.filter(entry => typeof entry === 'string')
+      : []
+    const { ctx, records } = mockContext(assertSupportedJsonSchema, injectNames)
     try {
       module.apply(ctx, {})
     } catch (error) {
@@ -212,7 +324,7 @@ if (failed > 0) {
   console.error(`validate-plugins: ${failed} plugin(s) would break server load — restart aborted, old server untouched`)
   process.exit(1)
 }
-console.log(`validate-plugins: all ${links.length} linked plugin(s) safe to load`)
+console.log(`validate-plugins: all ${links.length} active linked plugin(s) safe to load`)
 // Explicit exit: imported plugin modules may leave active handles (timers,
 // listeners) in the event loop, and waiting for it to drain would hang the
 // gate — and with it every restart script that invokes it.
