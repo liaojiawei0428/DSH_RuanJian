@@ -34,10 +34,10 @@ export function storePaths() {
  * Shape one persisted state object to the current schema, dropping unknown
  * fields so hand-edited files cannot smuggle junk into runtime reads.
  * @param {unknown} raw - parsed JSON value.
- * @returns {{version: number, bindings: Array<Record<string, unknown>>, settings: Record<string, string>}}
+ * @returns {{version: number, bindings: Array<Record<string, unknown>>, settings: Record<string, string>, selectedBySession: Record<string, string>}}
  */
 export function normalizeState(raw) {
-  const base = { version: STORE_VERSION, bindings: [], settings: {} }
+  const base = { version: STORE_VERSION, bindings: [], settings: {}, selectedBySession: {} }
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return base
   const src = /** @type {Record<string, unknown>} */ (raw)
   if (Array.isArray(src.bindings)) {
@@ -53,6 +53,11 @@ export function normalizeState(raw) {
   if (src.settings && typeof src.settings === 'object' && !Array.isArray(src.settings)) {
     for (const [key, value] of Object.entries(/** @type {Record<string, unknown>} */ (src.settings))) {
       if (typeof value === 'string') base.settings[key] = value
+    }
+  }
+  if (src.selectedBySession && typeof src.selectedBySession === 'object' && !Array.isArray(src.selectedBySession)) {
+    for (const [sessionId, bindingId] of Object.entries(/** @type {Record<string, unknown>} */ (src.selectedBySession))) {
+      if (typeof bindingId === 'string') base.selectedBySession[sessionId] = bindingId
     }
   }
   return base
@@ -161,6 +166,36 @@ export class GithubStore {
     return this.state.bindings.find((b) => b.id === id)
   }
 
+  /** The GitHub username shared by default across new bindings, if configured. */
+  getGithubUser() {
+    return this.state.settings.githubUser ?? ''
+  }
+
+  /**
+   * Session → binding target map.
+   * @param {string} sessionId
+   * @returns {string | undefined}
+   */
+  getTarget(sessionId) {
+    return this.state.selectedBySession[sessionId]
+  }
+
+  /** @returns {Record<string, string>} copy of every session→binding map. */
+  getTargets() {
+    return { ...this.state.selectedBySession }
+  }
+
+  /**
+   * Set (or clear, when bindingId is undefined) the binding bound to a session.
+   * @param {string} sessionId
+   * @param {string | undefined} bindingId
+   */
+  setTarget(sessionId, bindingId) {
+    if (bindingId === undefined) delete this.state.selectedBySession[sessionId]
+    else this.state.selectedBySession[sessionId] = bindingId
+    void this.persistNow(this.state)
+  }
+
   /**
    * Insert or update one binding record.
    * @param {Record<string, unknown>} input - full record fields.
@@ -184,6 +219,9 @@ export class GithubStore {
     const before = this.state.bindings.length
     this.state.bindings = this.state.bindings.filter((b) => b.id !== id)
     this.credentials = Object.fromEntries(Object.entries(this.credentials).filter(([k]) => k !== id))
+    for (const [sessionId, bound] of Object.entries(this.state.selectedBySession)) {
+      if (bound === id) delete this.state.selectedBySession[sessionId]
+    }
     void this.persistNow(this.state)
     void this.persistNow(this.credentials, true)
     return this.state.bindings.length < before

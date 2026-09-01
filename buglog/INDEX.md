@@ -1,6 +1,6 @@
 # BUG 记录索引
 
-共 79 条（fixed 70 / workaround 4 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 80 条（fixed 71 / workaround 4 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
@@ -20,6 +20,7 @@
 | 2026-09-01 | [2026-09-01-remote-ssh-peer-dep-breaks-boot](2026-09-01-remote-ssh-peer-dep-breaks-boot.md) | dsh-remote-ssh（第三方 github 插件）安装缺陷 + watchdog 定位器外层误抓 | major | fixed | DSH 启动 3 次全灭（09/01 上午起）：err.log 报 `failed to import loader entry dsh-remote-ssh (dsh-remote-ssh): The requested module '@deepseek-ai/dsh-settings' does not provide an export named 'installSettingsSection'`；看门狗误判肇事者为 cordis:include、隔离被拒（非 link 依赖）、重启预算耗尽后放弃自动恢复。 |
 | 2026-09-01 | [2026-09-01-jsdoc-glob-star-slash-closes-comment](2026-09-01-jsdoc-glob-star-slash-closes-comment.md) | dsh-server-ssh | minor | fixed | sftp-io.js 被 node --check 拒绝：JSDoc 内 glob 示例触发块注释提前闭合，SyntaxError |
 | 2026-09-01 | [2026-09-01-headless-missing-self-plugins](2026-09-01-headless-missing-self-plugins.md) | dsh-headless-profile | major | fixed | headless 模式会话缺少全部自研插件：无 D7 工具分工规则注入、无 buglog 工具、无 python 工具——规则与环境只覆盖 web。 |
+| 2026-09-01 | [2026-09-01-github-push-ui-align-ssh](2026-09-01-github-push-ui-align-ssh.md) | dsh-github-push | minor | fixed | GitHub 推送面板与 SSH 面板视觉不一致（宽度/条目对齐/边框风格差异） |
 | 2026-09-01 | [2026-09-01-github-push-proxy-support](2026-09-01-github-push-proxy-support.md) | dsh-github-push | major | fixed | GitHub 绑定探测超时无法推送（直连 443 不通），且绑定路径非 git 仓库 |
 | 2026-09-01 | [2026-09-01-export-stub-placeholder-deleted](2026-09-01-export-stub-placeholder-deleted.md) | banmufanghua-changjing_export_stub | major | fixed | git 工作区删除 changjing_export_stub/changjing_placeholder.png,若提交则抖音导出包纹理全部缺失 |
 | 2026-09-01 | [2026-09-01-esbuild-esm-output-cjs-interop-banner](2026-09-01-esbuild-esm-output-cjs-interop-banner.md) | dsh-server-ssh/build | major | fixed | 闸门加载 dsh-server-ssh 产品 index.js 报 "Dynamic require of \"net\" is not supported"，alias 修复后变 "Dynamic require of \"node:net\""，再变 "__dirname is not defined in ES module scope"——启动必崩，闸门拦截。 |

@@ -71,6 +71,8 @@ export function applyRpc(ctx, deps) {
       case 'push': return push(args)
       case 'settings.get': return getSettings()
       case 'settings.set': return setSettings(args)
+      case 'target.set': return setTarget(args)
+      case 'target.clear': return clearTarget(args)
       default: throw new GitError('BAD_REQUEST', `unknown endpoint: ${endpoint}`)
     }
   }
@@ -86,7 +88,7 @@ export function applyRpc(ctx, deps) {
 
   /** @returns {Record<string, unknown>} */
   function getSettings() {
-    return { proxy: store.getSetting('proxy') ?? '' }
+    return { proxy: store.getSetting('proxy') ?? '', githubUser: store.getGithubUser() }
   }
 
   /**
@@ -94,7 +96,33 @@ export function applyRpc(ctx, deps) {
    */
   function setSettings(args) {
     if (typeof args.proxy === 'string') store.setSetting('proxy', args.proxy.trim())
+    if (typeof args.githubUser === 'string') store.setSetting('githubUser', args.githubUser.trim())
     return getSettings()
+  }
+
+  /**
+   * Bind one binding to a session (the session's default push target).
+   * @param {Record<string, unknown>} args
+   */
+  async function setTarget(args) {
+    const sessionId = typeof args.sessionId === 'string' && args.sessionId !== '' ? args.sessionId : ''
+    const bindingId = typeof args.bindingId === 'string' ? args.bindingId : ''
+    if (sessionId === '') throw new GitError('BAD_REQUEST', 'sessionId is required')
+    if (bindingId === '') throw new GitError('BAD_REQUEST', 'bindingId is required')
+    if (store.getBinding(bindingId) === undefined) throw new GitError('BINDING_NOT_FOUND', `no binding with id ${bindingId}`)
+    store.setTarget(sessionId, bindingId)
+    return { bound: bindingId }
+  }
+
+  /**
+   * Unbind the current session.
+   * @param {Record<string, unknown>} args
+   */
+  function clearTarget(args) {
+    const sessionId = typeof args.sessionId === 'string' ? args.sessionId : ''
+    if (sessionId === '') throw new GitError('BAD_REQUEST', 'sessionId is required')
+    store.setTarget(sessionId, undefined)
+    return { bound: undefined }
   }
 
   /**
@@ -118,7 +146,7 @@ export function applyRpc(ctx, deps) {
       })
       probed.push(publicBinding(binding, { status, hasToken: token !== undefined }))
     }
-    return { bindings: probed, settings: getSettings() }
+    return { bindings: probed, settings: getSettings(), selectedBySession: { ...store.getTargets() } }
   }
 
   /**

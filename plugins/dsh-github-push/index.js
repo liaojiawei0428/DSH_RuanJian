@@ -12,7 +12,7 @@ function storePaths() {
   return { dir, stateFile: join(dir, "state.json"), credFile: join(dir, "credentials.json") };
 }
 function normalizeState(raw) {
-  const base = { version: STORE_VERSION, bindings: [], settings: {} };
+  const base = { version: STORE_VERSION, bindings: [], settings: {}, selectedBySession: {} };
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return base;
   const src = (
     /** @type {Record<string, unknown>} */
@@ -34,6 +34,14 @@ function normalizeState(raw) {
       src.settings
     )) {
       if (typeof value === "string") base.settings[key] = value;
+    }
+  }
+  if (src.selectedBySession && typeof src.selectedBySession === "object" && !Array.isArray(src.selectedBySession)) {
+    for (const [sessionId, bindingId] of Object.entries(
+      /** @type {Record<string, unknown>} */
+      src.selectedBySession
+    )) {
+      if (typeof bindingId === "string") base.selectedBySession[sessionId] = bindingId;
     }
   }
   return base;
@@ -134,6 +142,32 @@ var GithubStore = class {
   getBinding(id) {
     return this.state.bindings.find((b) => b.id === id);
   }
+  /** The GitHub username shared by default across new bindings, if configured. */
+  getGithubUser() {
+    return this.state.settings.githubUser ?? "";
+  }
+  /**
+   * Session → binding target map.
+   * @param {string} sessionId
+   * @returns {string | undefined}
+   */
+  getTarget(sessionId) {
+    return this.state.selectedBySession[sessionId];
+  }
+  /** @returns {Record<string, string>} copy of every session→binding map. */
+  getTargets() {
+    return { ...this.state.selectedBySession };
+  }
+  /**
+   * Set (or clear, when bindingId is undefined) the binding bound to a session.
+   * @param {string} sessionId
+   * @param {string | undefined} bindingId
+   */
+  setTarget(sessionId, bindingId) {
+    if (bindingId === void 0) delete this.state.selectedBySession[sessionId];
+    else this.state.selectedBySession[sessionId] = bindingId;
+    void this.persistNow(this.state);
+  }
   /**
    * Insert or update one binding record.
    * @param {Record<string, unknown>} input - full record fields.
@@ -159,6 +193,9 @@ var GithubStore = class {
     const before = this.state.bindings.length;
     this.state.bindings = this.state.bindings.filter((b) => b.id !== id);
     this.credentials = Object.fromEntries(Object.entries(this.credentials).filter(([k]) => k !== id));
+    for (const [sessionId, bound] of Object.entries(this.state.selectedBySession)) {
+      if (bound === id) delete this.state.selectedBySession[sessionId];
+    }
     void this.persistNow(this.state);
     void this.persistNow(this.credentials, true);
     return this.state.bindings.length < before;
@@ -407,6 +444,10 @@ function applyRpc(ctx, deps) {
         return getSettings();
       case "settings.set":
         return setSettings(args);
+      case "target.set":
+        return setTarget(args);
+      case "target.clear":
+        return clearTarget(args);
       default:
         throw new GitError("BAD_REQUEST", `unknown endpoint: ${endpoint}`);
     }
@@ -419,11 +460,27 @@ function applyRpc(ctx, deps) {
     return void 0;
   }
   function getSettings() {
-    return { proxy: store.getSetting("proxy") ?? "" };
+    return { proxy: store.getSetting("proxy") ?? "", githubUser: store.getGithubUser() };
   }
   function setSettings(args) {
     if (typeof args.proxy === "string") store.setSetting("proxy", args.proxy.trim());
+    if (typeof args.githubUser === "string") store.setSetting("githubUser", args.githubUser.trim());
     return getSettings();
+  }
+  async function setTarget(args) {
+    const sessionId = typeof args.sessionId === "string" && args.sessionId !== "" ? args.sessionId : "";
+    const bindingId = typeof args.bindingId === "string" ? args.bindingId : "";
+    if (sessionId === "") throw new GitError("BAD_REQUEST", "sessionId is required");
+    if (bindingId === "") throw new GitError("BAD_REQUEST", "bindingId is required");
+    if (store.getBinding(bindingId) === void 0) throw new GitError("BINDING_NOT_FOUND", `no binding with id ${bindingId}`);
+    store.setTarget(sessionId, bindingId);
+    return { bound: bindingId };
+  }
+  function clearTarget(args) {
+    const sessionId = typeof args.sessionId === "string" ? args.sessionId : "";
+    if (sessionId === "") throw new GitError("BAD_REQUEST", "sessionId is required");
+    store.setTarget(sessionId, void 0);
+    return { bound: void 0 };
   }
   async function stateSnapshot() {
     const bindings = store.listBindings();
@@ -457,7 +514,7 @@ function applyRpc(ctx, deps) {
       );
       probed.push(publicBinding(binding, { status, hasToken: token !== void 0 }));
     }
-    return { bindings: probed, settings: getSettings() };
+    return { bindings: probed, settings: getSettings(), selectedBySession: { ...store.getTargets() } };
   }
   async function upsertBinding(args) {
     const input = (

@@ -1,1 +1,6 @@
-[]
+[
+  {
+    "time": "2026-09-01T16:40:46.107Z",
+    "hint": "fix-shaped activity without a bug_report call"
+  }
+]
