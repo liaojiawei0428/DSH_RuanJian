@@ -95,11 +95,26 @@ function mockContext(assertSchema, injectNames) {
           throw new Error(`tool "${definition.name}": output { schema, render } is required`)
         }
         try {
+          // Raw registrations skip the DSL compiler, so the compiled parameter
+          // schema itself must already satisfy the enforced subset (production
+          // renders it verbatim into the model's tool prompt).
+          assertSchema(definition.parameters)
           assertSchema(output.schema)
         } catch (error) {
           throw new Error(`tool "${definition.name}": ${error.message}`)
         }
         records.tools.push(definition.name)
+      },
+    },
+    // The dsh web runtime always mounts the connection service (RPC channel
+    // registry); mock it so plugins declaring `inject: ['connection']` exercise
+    // their real registration path here instead of failing on `undefined`.
+    connection: {
+      rpc: {
+        handle: channel => {
+          records.routes.push(channel)
+          return () => {}
+        },
       },
     },
     webServer: { register: route => { records.routes.push(route.path) } },

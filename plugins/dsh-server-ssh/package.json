@@ -1,0 +1,31 @@
+{
+  "name": "dsh-server-ssh",
+  "version": "0.1.0",
+  "description": "DSH system component: server config login — configure SSH servers in the GUI, all sessions reach them through the ssh_* tools",
+  "private": true,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "license": "MIT",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.1",
+    "ssh2": "1.17.0"
+  }
+}

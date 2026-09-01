@@ -3,3 +3,6 @@
 dsh-web.pid
 backups/
 watchdog.heartbeat
+
+# 依赖目录，不进仓库
+node_modules/

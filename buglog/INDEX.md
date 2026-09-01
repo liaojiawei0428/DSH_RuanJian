@@ -1,11 +1,30 @@
 # BUG 记录索引
 
-共 60 条（fixed 51 / workaround 4 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 79 条（fixed 70 / workaround 4 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
 | 2026-09-01 | [2026-09-01-watchdog-death-immunity](2026-09-01-watchdog-death-immunity.md) | watchdog-dsh.ps1 | major | workaround | 看门狗无声死亡第 2 例：pid 26636 上岗约 1 分钟消失（前例 2568 约 2 分钟），事件日志与自身日志均无痕迹，运行期保护悬空 |
+| 2026-09-01 | [2026-09-01-transport-readfs-wrong-import](2026-09-01-transport-readfs-wrong-import.md) | dsh-server-ssh/src | major | fixed | 闸门加载 dsh-server-ssh 报 "The requested module 'node:fs/promises' does not provide an export named 'readFileSync'"，插件无法加载。 |
+| 2026-09-01 | [2026-09-01-ssh-tools-model-visible-output](2026-09-01-ssh-tools-model-visible-output.md) | dsh-server-ssh | major | fixed | 模型收到 ssh_* 工具结果仅一行摘要（bash exit 0），无法读取远端输出自动汇报 |
+| 2026-09-01 | [2026-09-01-ssh-tofu-trust-ui-missing](2026-09-01-ssh-tofu-trust-ui-missing.md) | dsh-server-ssh | major | fixed | 新主机首次「测试连接」报主机密钥未信任后无路可走，无法完成添加 |
+| 2026-09-01 | [2026-09-01-ssh-rpc-envelope-mismatch](2026-09-01-ssh-rpc-envelope-mismatch.md) | dsh-server-ssh | major | fixed | 面板所有 RPC 无反馈：测试连接停在「正在连接…」、保存后服务器列表永远空、state 恒 undefined |
+| 2026-09-01 | [2026-09-01-ssh-plugin-ui-align-design-platform](2026-09-01-ssh-plugin-ui-align-design-platform.md) | dsh-server-ssh | minor | fixed | SSH 面板 UI 与 DSH 原生胶囊/弹窗风格割裂（方按钮、直角弹窗、错误 token），布局为冗长单列 |
+| 2026-09-01 | [2026-09-01-ssh-password-probe-arg-missing](2026-09-01-ssh-password-probe-arg-missing.md) | dsh-server-ssh | major | fixed | 密码认证的服务器点「测试连接」必报「该认证方式需要密码」 |
+| 2026-09-01 | [2026-09-01-ssh-panel-vertical-no-scroll](2026-09-01-ssh-panel-vertical-no-scroll.md) | dsh-server-ssh | minor | fixed | SSH 面板两栏排版不受欢迎，编辑时出现滚动条 |
+| 2026-09-01 | [2026-09-01-ssh-panel-session-bind-refresh](2026-09-01-ssh-panel-session-bind-refresh.md) | dsh-server-ssh | major | fixed | 打开 SSH 弹窗可能显示陈旧会话绑定，绑定的服务器被删除后展示 ghost 名称 |
+| 2026-09-01 | [2026-09-01-ssh-panel-restore-bound-section](2026-09-01-ssh-panel-restore-bound-section.md) | dsh-server-ssh | minor | fixed | 纵向布局重构时删除了「当前会话已绑定」区块，用户要求恢复；列表操作按钮宽度参差 |
+| 2026-09-01 | [2026-09-01-ssh-panel-overflow-alignment](2026-09-01-ssh-panel-overflow-alignment.md) | dsh-server-ssh | major | fixed | 服务器名称条目/表单控件跑出弹窗边界，绑定区块与列表条目不对齐 |
+| 2026-09-01 | [2026-09-01-server-ssh-panel-undefined-vs-null-crash](2026-09-01-server-ssh-panel-undefined-vs-null-crash.md) | dsh-server-ssh/client | major | fixed | SSH 管理面板一打开即崩溃（notice/editing 初值 undefined 误过 !== null 判断，访问 notice.kind / editing.form 抛 TypeError）；此前仅 bundle 加载成功，面板从未渲染成功。 |
+| 2026-09-01 | [2026-09-01-server-ssh-client-react-global](2026-09-01-server-ssh-client-react-global.md) | dsh-server-ssh（自研 SSH 服务器配置插件）client 半端 | major | fixed | DSH 服务正常启动，但 Web UI 顶部报 `Failed to load plugins: failed to import loader entry d0f21571 (dsh-server-ssh): React is not defined`。 |
+| 2026-09-01 | [2026-09-01-remote-ssh-peer-dep-breaks-boot](2026-09-01-remote-ssh-peer-dep-breaks-boot.md) | dsh-remote-ssh（第三方 github 插件）安装缺陷 + watchdog 定位器外层误抓 | major | fixed | DSH 启动 3 次全灭（09/01 上午起）：err.log 报 `failed to import loader entry dsh-remote-ssh (dsh-remote-ssh): The requested module '@deepseek-ai/dsh-settings' does not provide an export named 'installSettingsSection'`；看门狗误判肇事者为 cordis:include、隔离被拒（非 link 依赖）、重启预算耗尽后放弃自动恢复。 |
+| 2026-09-01 | [2026-09-01-jsdoc-glob-star-slash-closes-comment](2026-09-01-jsdoc-glob-star-slash-closes-comment.md) | dsh-server-ssh | minor | fixed | sftp-io.js 被 node --check 拒绝：JSDoc 内 glob 示例触发块注释提前闭合，SyntaxError |
 | 2026-09-01 | [2026-09-01-headless-missing-self-plugins](2026-09-01-headless-missing-self-plugins.md) | dsh-headless-profile | major | fixed | headless 模式会话缺少全部自研插件：无 D7 工具分工规则注入、无 buglog 工具、无 python 工具——规则与环境只覆盖 web。 |
+| 2026-09-01 | [2026-09-01-github-push-proxy-support](2026-09-01-github-push-proxy-support.md) | dsh-github-push | major | fixed | GitHub 绑定探测超时无法推送（直连 443 不通），且绑定路径非 git 仓库 |
+| 2026-09-01 | [2026-09-01-export-stub-placeholder-deleted](2026-09-01-export-stub-placeholder-deleted.md) | banmufanghua-changjing_export_stub | major | fixed | git 工作区删除 changjing_export_stub/changjing_placeholder.png,若提交则抖音导出包纹理全部缺失 |
+| 2026-09-01 | [2026-09-01-esbuild-esm-output-cjs-interop-banner](2026-09-01-esbuild-esm-output-cjs-interop-banner.md) | dsh-server-ssh/build | major | fixed | 闸门加载 dsh-server-ssh 产品 index.js 报 "Dynamic require of \"net\" is not supported"，alias 修复后变 "Dynamic require of \"node:net\""，再变 "__dirname is not defined in ES module scope"——启动必崩，闸门拦截。 |
+| 2026-09-01 | [2026-09-01-dsh-remote-ssh-peer-dep-boot-crash](2026-09-01-dsh-remote-ssh-peer-dep-boot-crash.md) | plugins-install | critical | fixed | 安装第三方插件 dsh-remote-ssh（github:NaNQiQ/deepseek-harness-remote-ssh）后 DSH boot 全灭，GUI 报插件无法安装，服务反复崩溃无法启动 |
+| 2026-09-01 | [2026-09-01-agents-md-autoload-count-stale](2026-09-01-agents-md-autoload-count-stale.md) | banmufanghua-docs | minor | fixed | AGENTS.md 声明 Autoload 17 个/15 个 .gd,实际 18 条,与 project.godot 不符 |
 | 2026-08-31 | [2026-08-31-wmi-create-no-env-inheritance](2026-08-31-wmi-create-no-env-inheritance.md) | watchdog-dsh.ps1 / start-dsh-web.ps1 | minor | fixed | $env:DSH_DRILL='1' 后经 WMI Win32_Process.Create 拉起 start-dsh-web.ps1 -Restart，启动器闸门仍按无演练模式 FAIL（15:49:58 restart aborted） |
 | 2026-08-31 | [2026-08-31-watchdog-died-unprotected-window](2026-08-31-watchdog-died-unprotected-window.md) | watchdog-dsh.ps1 | major | open | 看门狗 2568 于 15:58:44 正常上岗后无故消失（进程不在、无日志），服务存活但 G5 保护悬空——看门狗是最后一道防线且无自愈机制，死亡后保护空窗直到下次启动器运行 |
 | 2026-08-31 | [2026-08-31-validate-gate-missing-inject-guard](2026-08-31-validate-gate-missing-inject-guard.md) | DSH-ops/validate-plugins.mjs | major | fixed | 插件漏写 inject 声明时闸门 PASS 但服务加载失败：闸门 mock ctx 的服务属性是普通对象，不模拟 Cordis 运行时守卫，同类缺陷未来仍会漏检 |

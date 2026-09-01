@@ -26,6 +26,12 @@ function Get-BrokenPluginName {
   $errLog = Join-Path $ops 'dsh-web.err.log'
   if (-not (Test-Path $errLog)) { return $null }
   $tail = Get-Content $errLog -Tail 80 -ErrorAction SilentlyContinue
+  # 优先取最内层的 entry 报错（failed to import loader entry X (dsh-xxx)）：
+  # 外层 include (cordis:include) 只是包装，误抓它会让 disable 失败并浪费
+  # 看门狗预算（2026-09-01 dsh-remote-ssh 事故）。
+  foreach ($line in $tail) {
+    if ($line -match 'failed to import loader entry \S+ \(([^)]+)\)') { return $Matches[1] }
+  }
   foreach ($line in $tail) {
     if ($line -match 'failed to apply loader entry \S+ \(([^)]+)\)') { return $Matches[1] }
   }
