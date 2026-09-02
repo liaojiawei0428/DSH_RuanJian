@@ -1,9 +1,12 @@
 # BUG 记录索引
 
-共 80 条（fixed 71 / workaround 4 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 83 条（fixed 73 / workaround 5 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
+| 2026-09-02 | [2026-09-02-ssh-edit-rename-failed](2026-09-02-ssh-edit-rename-failed.md) | ssh-tool | major | workaround | ssh_edit 修改远端文件一律失败 "rename failed: Failure"，文件不变 |
+| 2026-09-02 | [2026-09-02-plugin-ui-elevation-spec-upgrade](2026-09-02-plugin-ui-elevation-spec-upgrade.md) | dsh-plugin-ui | minor | fixed | 两插件弹窗/输入框/圆点与官方 alpha.4 新 elevation 风格不一致 |
+| 2026-09-02 | [2026-09-02-github-push-binding-overwrite](2026-09-02-github-push-binding-overwrite.md) | dsh-github-push | major | fixed | 新增仓库绑定后原有绑定被整体覆盖（id 不变内容被换） |
 | 2026-09-01 | [2026-09-01-watchdog-death-immunity](2026-09-01-watchdog-death-immunity.md) | watchdog-dsh.ps1 | major | workaround | 看门狗无声死亡第 2 例：pid 26636 上岗约 1 分钟消失（前例 2568 约 2 分钟），事件日志与自身日志均无痕迹，运行期保护悬空 |
 | 2026-09-01 | [2026-09-01-transport-readfs-wrong-import](2026-09-01-transport-readfs-wrong-import.md) | dsh-server-ssh/src | major | fixed | 闸门加载 dsh-server-ssh 报 "The requested module 'node:fs/promises' does not provide an export named 'readFileSync'"，插件无法加载。 |
 | 2026-09-01 | [2026-09-01-ssh-tools-model-visible-output](2026-09-01-ssh-tools-model-visible-output.md) | dsh-server-ssh | major | fixed | 模型收到 ssh_* 工具结果仅一行摘要（bash exit 0），无法读取远端输出自动汇报 |

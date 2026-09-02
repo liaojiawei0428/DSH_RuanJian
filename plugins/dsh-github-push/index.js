@@ -6,6 +6,9 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
 var STORE_VERSION = 1;
+function mintBindingId() {
+  return `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
 function storePaths() {
   const root = process.env.DSH_HOME && process.env.DSH_HOME !== "" ? process.env.DSH_HOME : join(homedir(), ".dsh");
   const dir = join(root, "github-push");
@@ -169,21 +172,34 @@ var GithubStore = class {
     void this.persistNow(this.state);
   }
   /**
-   * Insert or update one binding record.
-   * @param {Record<string, unknown>} input - full record fields.
+   * Create a NEW binding record. The id is minted here and guaranteed unique
+   * against existing records, so a save can never overwrite another binding.
+   * @param {Record<string, unknown>} input - full record fields (no id).
+   * @returns {Record<string, unknown>} the created record (with minted id).
    */
-  upsertBinding(input) {
-    const existing = typeof input.id === "string" ? this.state.bindings.find((b) => b.id === input.id) : void 0;
-    if (existing !== void 0) {
-      Object.assign(existing, input);
-    } else {
-      this.state.bindings.push({ ...input });
+  createBinding(input) {
+    let id = mintBindingId();
+    while (this.state.bindings.some((b) => b.id === id)) id = mintBindingId();
+    const record = { id, ...input };
+    this.state.bindings.push(record);
+    void this.persistNow(this.state);
+    return record;
+  }
+  /**
+   * Update ONLY an existing binding record. Unknown ids are rejected so an
+   * edit can never silently become a create (which would hide a stale id).
+   * @param {string} id
+   * @param {Record<string, unknown>} patch - fields to overwrite (no id).
+   * @returns {Record<string, unknown>} the updated record.
+   */
+  updateBinding(id, patch) {
+    const existing = this.state.bindings.find((b) => b.id === id);
+    if (existing === void 0) throw new Error(`no binding with id ${id}`);
+    for (const [key, value] of Object.entries(patch)) {
+      if (key !== "id") existing[key] = value;
     }
     void this.persistNow(this.state);
-    return this.getBinding(
-      /** @type {string} */
-      input.id
-    );
+    return existing;
   }
   /**
    * @param {string} id
@@ -521,14 +537,13 @@ function applyRpc(ctx, deps) {
       /** @type {Record<string, unknown>} */
       args.input ?? {}
     );
-    const id = typeof input.id === "string" ? input.id : void 0;
+    const id = typeof input.id === "string" && input.id !== "" ? input.id : void 0;
     for (const field of ["name", "localPath", "repoOwner", "repoName", "branch"]) {
       if (typeof input[field] !== "string" || input[field] === "") {
         throw new GitError("BAD_REQUEST", `${field} \u4E0D\u80FD\u4E3A\u7A7A`);
       }
     }
-    const record = {
-      id: id ?? `b${Date.now().toString(36)}`,
+    const fields = {
       name: input.name,
       localPath: input.localPath,
       repoOwner: input.repoOwner,
@@ -538,7 +553,12 @@ function applyRpc(ctx, deps) {
         input.branch ?? "main"
       )
     };
-    store.upsertBinding(record);
+    let record;
+    if (id === void 0) {
+      record = store.createBinding(fields);
+    } else {
+      record = store.updateBinding(id, fields);
+    }
     const token = typeof input.token === "string" && input.token !== "" ? input.token : void 0;
     if (token !== void 0) store.setToken(
       /** @type {string} */

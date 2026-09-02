@@ -46,11 +46,11 @@ function ensureStyles() {
   font-family:var(--dsw-font-family,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif);
   font-size:13px; line-height:20px; cursor:pointer; white-space:nowrap; }
 .dshgp-cap:hover { background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,0.06)); }
-.dshgp-cap .dot { width:6px; height:6px; border-radius:50%; flex:none;
+.dshgp-cap .dot { width:6px; height:6px; border-radius:50%; corner-shape:round; flex:none;
   background:var(--dsw-alias-label-tertiary,#81858c); }
 .dshgp-cap .dot.on { background:var(--dsw-alias-state-success-primary,#22c55e); }
 
-/* ---- Modal (mirrors ui-primitives Modal) ---- */
+/* ---- Modal (mirrors ui-primitives Modal; elevation-prominent) ---- */
 .dshgp-overlay { position:fixed; inset:0; z-index:1000; display:flex; align-items:center;
   justify-content:center; padding:24px; }
 .dshgp-mask { position:absolute; inset:0;
@@ -58,9 +58,8 @@ function ensureStyles() {
   backdrop-filter:var(--dsw-mask-blur,blur(2px)); }
 .dshgp-modal { position:relative; z-index:1; display:flex; flex-direction:column;
   width:min(640px,100%);
-  border:1px solid var(--dsw-alias-border-inverted,rgba(0,0,0,0));
-  border-radius:24px; background:var(--dsw-alias-bg-layer-2,#fff);
-  box-shadow:var(--dsw-shadow-lv3,0 0 1px 0 rgba(0,0,0,0.2),0 12px 32px 0 rgba(0,0,0,0.08)); }
+  border:0; border-radius:24px; background:var(--dsw-alias-bg-layer-2,#fff);
+  box-shadow:var(--dsw-elevation-prominent,var(--dsw-shadow-lv3,0 0 1px 0 rgba(0,0,0,0.2),0 12px 32px 0 rgba(0,0,0,0.08))); }
 .dshgp-head { display:flex; align-items:center; justify-content:space-between; gap:8px;
   padding:20px 24px 8px; }
 .dshgp-title { margin:0; font-size:16px; line-height:24px; font-weight:500;
@@ -75,7 +74,7 @@ function ensureStyles() {
 
 /* ---- Network settings panel ---- */
 .dshgp-bound { display:flex; flex-direction:column; gap:8px; padding:10px 12px;
-  border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1)); border-radius:14px;
+  border:0.5px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1)); border-radius:14px;
   background:var(--dsw-alias-interactive-bg-hover-solid,rgba(0,0,0,0.02)); min-width:0; }
 .dshgp-proxy-row { display:flex; align-items:flex-end; gap:8px; min-width:0; }
 .dshgp-grow { flex:1 1 0; min-width:0; }
@@ -83,6 +82,8 @@ function ensureStyles() {
 /* ---- Row item (same geometric language as dsh-server-ssh) ---- */
 .dshgp-pane-title { margin:0; font-size:13px; line-height:20px; font-weight:600;
   color:var(--dsw-alias-label-secondary,#61666b); }
+.dshgp-edit-warn { margin:0; font-size:11px; line-height:16px;
+  color:var(--dsw-alias-state-warn-primary,#f59e0b); }
 .dshgp-roster { display:flex; flex-direction:column; gap:4px; min-width:0; }
 .dshgp-item { display:flex; align-items:center; gap:10px; padding:7px 12px; min-width:0;
   border:1px solid transparent; border-radius:12px; cursor:pointer;
@@ -90,7 +91,7 @@ function ensureStyles() {
 .dshgp-item:hover { background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,0.06)); }
 .dshgp-item.sel { border-color:var(--dsw-alias-border-l2,rgba(0,0,0,0.1));
   background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,0.06)); }
-.dshgp-dot { width:8px; height:8px; border-radius:50%; flex:none;
+.dshgp-dot { width:8px; height:8px; border-radius:50%; corner-shape:round; flex:none;
   background:var(--dsw-alias-label-tertiary,#81858c); }
 .dshgp-dot.on { background:var(--dsw-alias-state-success-primary,#22c55e); }
 .dshgp-dot.warn { background:var(--dsw-alias-state-warn-primary,#f59e0b); }
@@ -101,7 +102,7 @@ function ensureStyles() {
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dshgp-status { display:flex; gap:4px; flex-wrap:wrap; margin-top:4px; }
 .dshgp-badge { flex:none; font-size:11px; line-height:18px; padding:0 8px; border-radius:9px;
-  border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));
+  border:0.5px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1));
   color:var(--dsw-alias-label-secondary,#61666b); white-space:nowrap; }
 .dshgp-badge.ok { border-color:var(--dsw-alias-state-success-primary,#22c55e);
   color:var(--dsw-alias-state-success-primary,#22c55e); }
@@ -132,11 +133,11 @@ function ensureStyles() {
 .dshgp-btn.primary:hover:not(:disabled) { background:var(--dsw-alias-button-primary-hover,#43454a); }
 .dshgp-btn.ghost:hover:not(:disabled) { background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,0.06)); }
 .dshgp-btn.ghost:active:not(:disabled) { background:var(--dsw-alias-interactive-bg-active,rgba(38,49,72,0.1)); }
-.dshgp-btn.outline { border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1)); }
+.dshgp-btn.outline { border:0.5px solid var(--dsw-alias-border-l3,rgba(0,0,0,0.12)); }
 .dshgp-btn.outline:hover:not(:disabled) { background:var(--dsw-alias-interactive-bg-hover,rgba(38,49,72,0.06)); }
 .dshgp-btn.danger { color:var(--dsw-alias-state-error-primary,#ec1313); }
 .dshgp-btn.tiny { height:22px; padding:0 8px; border-radius:11px; font-size:11px; line-height:18px; }
-.dshgp-btn.bound { border:1px solid var(--dsw-alias-state-success-primary,#22c55e);
+.dshgp-btn.bound { border:0.5px solid var(--dsw-alias-state-success-primary,#22c55e);
   color:var(--dsw-alias-state-success-primary,#22c55e); }
 
 /* ---- Form ---- */
@@ -146,12 +147,11 @@ function ensureStyles() {
 .dshgp-field { display:flex; flex-direction:column; gap:4px; font-size:12px;
   color:var(--dsw-alias-label-secondary,#61666b); min-width:0; }
 .dshgp-field input { height:32px; padding:0 10px; font-size:13px;
-  border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1)); border-radius:8px; outline:none;
+  border:0.5px solid var(--dsw-alias-border-l4,rgba(0,0,0,0.15)); border-radius:8px; outline:none;
   background:var(--dsw-alias-bg-layer-1,#fff); color:var(--dsw-alias-label-primary,#0f1115);
   font-family:var(--dsw-font-family,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif);
   width:100%; box-sizing:border-box; }
-.dshgp-field input:focus { box-shadow:0 0 0 2px var(--dsw-alias-border-l3,rgba(0,0,0,0.12));
-  border-color:var(--dsw-alias-label-primary,#0f1115); }
+.dshgp-field input:focus { border-color:var(--dsw-alias-brand-primary,#0f6bff); }
 .dshgp-form-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:2px; flex-wrap:wrap; }
 
 /* ---- Notice band ---- */
@@ -168,10 +168,11 @@ function ensureStyles() {
   color:var(--dsw-alias-label-primary,#0f1115); min-width:0; }
 .dshgp-push-title .dshgp-name { font-size:13px; }
 .dshgp-push .dshgp-field input { height:32px; padding:0 10px; font-size:13px;
-  border:1px solid var(--dsw-alias-border-l2,rgba(0,0,0,0.1)); border-radius:8px; outline:none;
+  border:0.5px solid var(--dsw-alias-border-l4,rgba(0,0,0,0.15)); border-radius:8px; outline:none;
   background:var(--dsw-alias-bg-layer-1,#fff); color:var(--dsw-alias-label-primary,#0f1115);
   font-family:var(--dsw-font-family,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif);
   width:100%; box-sizing:border-box; }
+.dshgp-push .dshgp-field input:focus { border-color:var(--dsw-alias-brand-primary,#0f6bff); }
 .dshgp-push-actions { display:flex; gap:8px; justify-content:flex-end; }
 .dshgp-hint { margin:0; font-size:11px; line-height:16px;
   color:var(--dsw-alias-label-tertiary,#81858c); }
@@ -593,6 +594,11 @@ function BindingForm(props) {
     "div",
     { className: "dshgp-form" },
     h("p", { className: "dshgp-pane-title" }, editing.id === void 0 ? "\u65B0\u589E\u7ED1\u5B9A" : `\u7F16\u8F91\u300C${editing.form.name}\u300D`),
+    editing.id !== void 0 && h(
+      "p",
+      { className: "dshgp-edit-warn" },
+      "\u6B63\u5728\u7F16\u8F91\u5DF2\u6709\u7ED1\u5B9A\uFF0C\u4FDD\u5B58\u5C06\u66F4\u65B0\u6B64\u8BB0\u5F55\uFF08\u4E0D\u4F1A\u65B0\u5EFA\uFF09"
+    ),
     h(
       "div",
       { className: "dshgp-grid" },
@@ -639,7 +645,7 @@ function BindingForm(props) {
       h("button", {
         className: "dshgp-btn primary",
         onClick: () => onSubmit(argsOf(), editing.id === void 0 ? "\u7ED1\u5B9A\u5DF2\u4FDD\u5B58" : "\u7ED1\u5B9A\u5DF2\u66F4\u65B0")
-      }, "\u4FDD\u5B58"),
+      }, editing.id === void 0 ? "\u4FDD\u5B58" : "\u4FDD\u5B58\u66F4\u6539"),
       h("button", { className: "dshgp-btn ghost", onClick: onCancel }, "\u53D6\u6D88")
     )
   );

@@ -21,6 +21,16 @@ import { homedir } from 'node:os'
 export const STORE_VERSION = 1
 
 /**
+ * Mint a fresh binding id. Combines a base-36 millisecond timestamp with a
+ * random suffix so two saves in the same millisecond cannot collide (the old
+ * `Date.now().toString(36)` alone could collide and silently overwrite).
+ * @returns {string}
+ */
+export function mintBindingId() {
+  return `b${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`
+}
+
+/**
  * Resolve the store directory and both file paths.
  * @returns {{dir: string, stateFile: string, credFile: string}}
  */
@@ -197,18 +207,35 @@ export class GithubStore {
   }
 
   /**
-   * Insert or update one binding record.
-   * @param {Record<string, unknown>} input - full record fields.
+   * Create a NEW binding record. The id is minted here and guaranteed unique
+   * against existing records, so a save can never overwrite another binding.
+   * @param {Record<string, unknown>} input - full record fields (no id).
+   * @returns {Record<string, unknown>} the created record (with minted id).
    */
-  upsertBinding(input) {
-    const existing = typeof input.id === 'string' ? this.state.bindings.find((b) => b.id === input.id) : undefined
-    if (existing !== undefined) {
-      Object.assign(existing, input)
-    } else {
-      this.state.bindings.push({ ...input })
+  createBinding(input) {
+    let id = mintBindingId()
+    while (this.state.bindings.some((b) => b.id === id)) id = mintBindingId()
+    const record = { id, ...input }
+    this.state.bindings.push(record)
+    void this.persistNow(this.state)
+    return record
+  }
+
+  /**
+   * Update ONLY an existing binding record. Unknown ids are rejected so an
+   * edit can never silently become a create (which would hide a stale id).
+   * @param {string} id
+   * @param {Record<string, unknown>} patch - fields to overwrite (no id).
+   * @returns {Record<string, unknown>} the updated record.
+   */
+  updateBinding(id, patch) {
+    const existing = this.state.bindings.find((b) => b.id === id)
+    if (existing === undefined) throw new Error(`no binding with id ${id}`)
+    for (const [key, value] of Object.entries(patch)) {
+      if (key !== 'id') existing[key] = value
     }
     void this.persistNow(this.state)
-    return this.getBinding(/** @type {string} */ (input.id))
+    return existing
   }
 
   /**

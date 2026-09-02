@@ -150,26 +150,33 @@ export function applyRpc(ctx, deps) {
   }
 
   /**
-   * Create or update one binding; the token arg is written to credentials.
+   * Create (no id) or update (with id) one binding. Creating NEVER reuses an
+   * id, so a new binding can never overwrite an existing one; updating targets
+   * exactly the given id and errors when that binding is gone. The token arg is
+   * written to credentials on create or update.
    * @param {Record<string, unknown>} args
    */
   async function upsertBinding(args) {
     const input = /** @type {Record<string, unknown>} */ (args.input ?? {})
-    const id = typeof input.id === 'string' ? input.id : undefined
+    const id = typeof input.id === 'string' && input.id !== '' ? input.id : undefined
     for (const field of ['name', 'localPath', 'repoOwner', 'repoName', 'branch']) {
       if (typeof input[field] !== 'string' || input[field] === '') {
         throw new GitError('BAD_REQUEST', `${field} 不能为空`)
       }
     }
-    const record = {
-      id: id ?? `b${Date.now().toString(36)}`,
+    const fields = {
       name: input.name,
       localPath: input.localPath,
       repoOwner: input.repoOwner,
       repoName: input.repoName,
       branch: /** @type {string} */ (input.branch ?? 'main'),
     }
-    store.upsertBinding(record)
+    let record
+    if (id === undefined) {
+      record = store.createBinding(fields)
+    } else {
+      record = store.updateBinding(id, fields) // throws when the id is gone
+    }
     const token = typeof input.token === 'string' && input.token !== '' ? input.token : undefined
     if (token !== undefined) store.setToken(/** @type {string} */ (record.id), token)
     return { binding: publicBinding(record) }
