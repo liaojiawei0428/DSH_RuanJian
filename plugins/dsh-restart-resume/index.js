@@ -136,6 +136,11 @@ async function launchRestart(markerPath, restartScript, entry) {
       // 波及不到它。中继只活到 WMI 调用返回，无需脱离 Job。
       // detached 依旧不可用：pwsh 7.6 在 DETACHED_PROCESS（无控制台）下启动
       // 即静默退出（同日对照实验：detached exit 0，CREATE_NO_WINDOW 存活）。
+      // 注意：不加 -WindowStyle Hidden——本 actor 由 WMI Win32_Process.Create
+      // 直接拉起（必须脱宿主 Job），WMI 不接受 STARTUPINFO，Hidden 无效（弹窗
+      // 照旧）；且 actor 是秒级重启执行者非长驻进程，弹窗一闪即逝、用户几乎
+      // 看不到。要彻底隐藏需改"WMI 拉中继→中继 Start-Process"模式，风险高且
+      // 收益低，暂不改（2026-09-02 记录，见 wmi-win32-process-create bug）。
       const actor = `"${pwsh}" -NoProfile -ExecutionPolicy Bypass -File "${restartScript}" -Restart`
       const relay = '$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create '
         + `-Arguments @{ CommandLine = '${actor}' }; exit $r.ReturnValue`

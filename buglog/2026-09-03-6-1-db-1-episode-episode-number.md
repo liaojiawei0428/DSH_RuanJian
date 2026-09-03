@@ -1,0 +1,12 @@
+---
+date: "2026-09-03T01:06:35.862Z"
+symptom: "小说分析后生成剧集剧本时只输出最后一集 (如\"第 6 集\"或\"结局篇\") 就完成, 完全没有第 1 集和中间集, DB 里该小说只有 1 条 episode 且 episode_number=总集数"
+component: "shipin-APP scriptService (剧集生成)"
+severity: "major"
+status: "fixed"
+root_cause: "aiEpisodePlan 拿到 AI 返回的单数字 epRange (如 \"5\"/\"6\", agnes 输出格式波动) 未规范化 → buildEpisodePlans `'5'.split('-')` e=undefined → arcEpCount=NaN → totalWeightedEpisodes=NaN → 被 arc 覆盖集数的字符配额全 NaN → content.slice(NaN,NaN) 空串被 `<50` 跳过 → 仅最后一集 (ep===totalEpisodes 强制 endIdx=len + JS slice 把 NaN start 当 0) 拿到全文并落库, 中间集全部缺失。"
+fix: "scriptService.ts 三层防御: ① aiEpisodePlan 加 normalizeEpRange (单数字 \"5\"→\"5-5\", 非法丢弃), ② buildEpisodePlans arcCharsPerEp 加 NaN/非有限 totalWeightedEpisodes 防御 (跳过坏 arc / 回退均匀分配), ③ 主循环非法区间兜底 fallback span。8 处版本号 3.0.147→3.0.148 (versionCode 343) + 完整 deploy.sh 部署 + 12 维 + 公网 APK/web 验收。"
+related_files:
+---
+
+用户反馈: 分析剧本剧集时只输出最后一集就完成, 无第 1 集与中间集。调查: ① 生产 DB 实锤 — 暴君的笼中雀 (3f28987a, 22019 字): ep_count=1, min_ep=6, max_ep=6, 只生成"结局篇 6" (3043 字), 对比历史正常 (5169d3b2 6 集 1-6)。② combined.log 决定性证据 — "AI episode plan episodes=6, arcs=4" → "Episode plans built boundariesFromAI=6, totalEpisodes=6" → 第一个 "Generating episode ep=6 textLen=22015 (=全文!)" → "Episode generation completed episodeCount=1"。③ 生产 dist 复现 — 构造 epRange 单数字 "5"/"6" 的 arcs 调用 buildEpisodePlans: 6 个 plan 全部 startCharIndex=NaN (NaN 区间 6/6), 正常 "5-5"/"6-6" 则 0/6 NaN。根因链: aiEpisodePlan 解析 arcs 不验证 epRange 格式 → AI 返回单数字 "5" 时 `'5'.split('-')` → e=undefined → arcEpCount=e-s+1=NaN → totalWeightedEpisodes=NaN → 被 arc 覆盖的集数 charsPerEp=NaN → content.slice(NaN,NaN) 空串 → 主循环 `<50 continue` 跳过第 1-5 集 → 第 6 集 ep===totalEpisodes 强制 endIdx=len, slice(NaN,len) 被 JS 当 0 拿到全文 → 只落库最后一集。注意 JS slice: start NaN 转 0, 这正是"最后一集拿到全文"的原因。agnes 模型输出格式波动致 epRange 偶发单数字 (非本次改动引入, v3.0.105 权重分配即有此缺陷, 此前 DeepSeek 输出规范未触发)。修复 (三层防御, apps/server/src/services/scriptService.ts): ① 新增 normalizeEpRange helper — 单数字 "5"→"5-5", 非法 (非数字/倒挂/NaN) 返 null 丢弃, aiEpisodePlan 解析 arcs 时调用; ② buildEpisodePlans arcCharsPerEp 加 NaN 防御 — 任一段 NaN 跳过该 arc, totalWeightedEpisodes 非有限时整段走 fallback 均匀分配; ③ 主循环对非法区间最后兜底 — remaining/totalEpisodes span 回退, 保证逐集输出。验证: 本地复现三场景 (畸形 arcs NaN 0/6 + 正常回归 6 plans 有序 + 空 arcs 均匀分配 1-6 全部) PASS; tsc 0 错; 生产完整部署: bash deploy.sh 9 步全绿 (6 维预检→备份→解压→8 处版本号 3.0.148→重启探测→BUG-165 1:1 .env==公网 APK==3.0.148→PID 10599→site.db→12 维全过), 公网 /api/version version=apk=3.0.148 + changelog 真实新条目 + APK HTTP/2 200 (sha256=7e44c894 本地=公网) + web bundle index-DDFBk94T.js 新 hash。commit a0e9368, 版本号 3.0.148 (versionCode 343)。

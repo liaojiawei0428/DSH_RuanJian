@@ -3,8 +3,8 @@ date: "2026-08-31T08:03:52.936Z"
 symptom: "看门狗 2568 于 15:58:44 正常上岗后无故消失（进程不在、无日志），服务存活但 G5 保护悬空——看门狗是最后一道防线且无自愈机制，死亡后保护空窗直到下次启动器运行"
 component: "watchdog-dsh.ps1"
 severity: "major"
-status: "open"
-root_cause: "2568 死因未明；已排除让位退出、单实例退出、服务崩溃连带三个已知退出路径"
+status: "fixed"
+root_cause: "已破案（2026-09-02 用户目击证词）：2568 由 WMI 拉起时弹黑色空终端，被用户手动关闭 = 强杀看门狗，故无退出日志、事件无痕。与 26636/27112/31652 同因，共 4 例。修复：全部拉起路径改用 Start-Process -WindowStyle Hidden，看门狗脚本启动即 GetConsoleWindow 自隐藏。见 2026-09-02-wmi-win32-process-create.md。"
 fix: "已手动 WMI 拉起新看门狗（pid 22880，16:01:47 上岗）恢复保护；安排数分钟后复查在岗状态以区分偶发/系统性。"
 related_files:
 ---

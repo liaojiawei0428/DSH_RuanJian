@@ -1,13 +1,24 @@
 # BUG 记录索引
 
-共 83 条（fixed 73 / workaround 5 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 94 条（fixed 83 / workaround 7 / open 4）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
+| 2026-09-03 | [2026-09-03-6-1-db-1-episode-episode-number](2026-09-03-6-1-db-1-episode-episode-number.md) | shipin-APP scriptService (剧集生成) | major | fixed | 小说分析后生成剧集剧本时只输出最后一集 (如"第 6 集"或"结局篇") 就完成, 完全没有第 1 集和中间集, DB 里该小说只有 1 条 episode 且 episode_number=总集数 |
+| 2026-09-02 | [2026-09-02-wmi-win32-process-create](2026-09-02-wmi-win32-process-create.md) | DSH-ops watchdog/watchdog-dsh.ps1+start-dsh-web.ps1+health-check.py | critical | fixed | WMI Win32_Process.Create 拉起的看门狗每次都弹黑窗，用户误关后看门狗被强杀（黑匣子无退出行） |
+| 2026-09-02 | [2026-09-02-web-deploy-dir-sop-mismatch](2026-09-02-web-deploy-dir-sop-mismatch.md) | web 部署 SOP (apps/web/scripts/deploy.sh + 部署手册) | major | workaround | v3.0.146 web 部署后公网 /assets/index-BlnZ4D8Y.js 返回 404（首页 200），新 bundle 未生效 |
 | 2026-09-02 | [2026-09-02-ssh-edit-rename-failed](2026-09-02-ssh-edit-rename-failed.md) | ssh-tool | major | workaround | ssh_edit 修改远端文件一律失败 "rename failed: Failure"，文件不变 |
 | 2026-09-02 | [2026-09-02-plugin-ui-elevation-spec-upgrade](2026-09-02-plugin-ui-elevation-spec-upgrade.md) | dsh-plugin-ui | minor | fixed | 两插件弹窗/输入框/圆点与官方 alpha.4 新 elevation 风格不一致 |
+| 2026-09-02 | [2026-09-02-markdown-web-mobile](2026-09-02-markdown-web-mobile.md) | shipin-APP apps/server characterService | major | fixed | 小说分析角色细节提取阶段无流式滚动输出：前端只见进度百分比，最后一次性蹦出完整角色 Markdown（web/mobile 均如此），主分析阶段却正常逐字滚动 |
+| 2026-09-02 | [2026-09-02-health-check](2026-09-02-health-check.md) | DSH-ops watchdog/health-check.py | major | fixed | health-check 复活后把中继进程误判为看门狗，看门狗在岗状态判断错乱 |
+| 2026-09-02 | [2026-09-02-health-check-py-2s-wmi](2026-09-02-health-check-py-2s-wmi.md) | DSH-ops watchdog/health-check.py | major | fixed | health-check.py 复活看门狗总是失败（"复活拉起后 2s 复查仍未见进程"），但手动复刻同款 WMI 命令成功 |
 | 2026-09-02 | [2026-09-02-github-push-binding-overwrite](2026-09-02-github-push-binding-overwrite.md) | dsh-github-push | major | fixed | 新增仓库绑定后原有绑定被整体覆盖（id 不变内容被换） |
-| 2026-09-01 | [2026-09-01-watchdog-death-immunity](2026-09-01-watchdog-death-immunity.md) | watchdog-dsh.ps1 | major | workaround | 看门狗无声死亡第 2 例：pid 26636 上岗约 1 分钟消失（前例 2568 约 2 分钟），事件日志与自身日志均无痕迹，运行期保护悬空 |
+| 2026-09-02 | [2026-09-02-deploy-sh-apiversion-timing-fail](2026-09-02-deploy-sh-apiversion-timing-fail.md) | deploy.sh (shipin-APP 远端部署脚本) | major | workaround | v3.0.146 部署时 deploy.sh 报 "✗ /api/version 返 FAIL 但 package.json 是 3.0.146" 并 exit 1，实际服务正常已启动 |
+| 2026-09-02 | [2026-09-02-deploy-sh-7-9-api-version-fail-package-j](2026-09-02-deploy-sh-7-9-api-version-fail-package-j.md) | shipin-APP apps/server/deploy.sh | major | fixed | 每次部署 deploy.sh 在 [7/9] 报 "✗ /api/version 返 FAIL 但 package.json 是 X.Y.Z (8 处同步失败!)" 并 exit 1，中断 PID/site.db 同步与 12 维验证（v3.0.146/147 连续两次）；且本地 git 版 deploy.sh 若直接部署会因 --strip-components=1 静默解压出空 dist |
+| 2026-09-02 | [2026-09-02-about-text-2-5-flash-wording](2026-09-02-about-text-2-5-flash-wording.md) | apps/web/src/pages/AboutPage.tsx | minor | fixed | About 页文案 "2.5-flash 文本 · 图像 · 视频" 暗示图像/视频也是 2.5-flash |
+| 2026-09-02 | [2026-09-02-30s-health-check-taskkill](2026-09-02-30s-health-check-taskkill.md) | DSH-ops watchdog/watchdog-dsh.ps1+health-check.py | major | fixed | 新拉起看门狗首 30s 被 health-check 误判卡死并 taskkill 误杀 |
+| 2026-09-02 | [2026-09-02-0-1-2-alpha-5-alpha-1](2026-09-02-0-1-2-alpha-5-alpha-1.md) | DSH-ops update-dsh.ps1 / version-history.md | minor | workaround | 官方仓库更新到 0.1.2-alpha.5 后版本台账仍停在 alpha.1、看门狗为旧实例 |
+| 2026-09-01 | [2026-09-01-watchdog-death-immunity](2026-09-01-watchdog-death-immunity.md) | watchdog-dsh.ps1 | major | fixed | 看门狗无声死亡第 2 例：pid 26636 上岗约 1 分钟消失（前例 2568 约 2 分钟），事件日志与自身日志均无痕迹，运行期保护悬空 |
 | 2026-09-01 | [2026-09-01-transport-readfs-wrong-import](2026-09-01-transport-readfs-wrong-import.md) | dsh-server-ssh/src | major | fixed | 闸门加载 dsh-server-ssh 报 "The requested module 'node:fs/promises' does not provide an export named 'readFileSync'"，插件无法加载。 |
 | 2026-09-01 | [2026-09-01-ssh-tools-model-visible-output](2026-09-01-ssh-tools-model-visible-output.md) | dsh-server-ssh | major | fixed | 模型收到 ssh_* 工具结果仅一行摘要（bash exit 0），无法读取远端输出自动汇报 |
 | 2026-09-01 | [2026-09-01-ssh-tofu-trust-ui-missing](2026-09-01-ssh-tofu-trust-ui-missing.md) | dsh-server-ssh | major | fixed | 新主机首次「测试连接」报主机密钥未信任后无路可走，无法完成添加 |
@@ -30,7 +41,7 @@
 | 2026-09-01 | [2026-09-01-dsh-remote-ssh-peer-dep-boot-crash](2026-09-01-dsh-remote-ssh-peer-dep-boot-crash.md) | plugins-install | critical | fixed | 安装第三方插件 dsh-remote-ssh（github:NaNQiQ/deepseek-harness-remote-ssh）后 DSH boot 全灭，GUI 报插件无法安装，服务反复崩溃无法启动 |
 | 2026-09-01 | [2026-09-01-agents-md-autoload-count-stale](2026-09-01-agents-md-autoload-count-stale.md) | banmufanghua-docs | minor | fixed | AGENTS.md 声明 Autoload 17 个/15 个 .gd,实际 18 条,与 project.godot 不符 |
 | 2026-08-31 | [2026-08-31-wmi-create-no-env-inheritance](2026-08-31-wmi-create-no-env-inheritance.md) | watchdog-dsh.ps1 / start-dsh-web.ps1 | minor | fixed | $env:DSH_DRILL='1' 后经 WMI Win32_Process.Create 拉起 start-dsh-web.ps1 -Restart，启动器闸门仍按无演练模式 FAIL（15:49:58 restart aborted） |
-| 2026-08-31 | [2026-08-31-watchdog-died-unprotected-window](2026-08-31-watchdog-died-unprotected-window.md) | watchdog-dsh.ps1 | major | open | 看门狗 2568 于 15:58:44 正常上岗后无故消失（进程不在、无日志），服务存活但 G5 保护悬空——看门狗是最后一道防线且无自愈机制，死亡后保护空窗直到下次启动器运行 |
+| 2026-08-31 | [2026-08-31-watchdog-died-unprotected-window](2026-08-31-watchdog-died-unprotected-window.md) | watchdog-dsh.ps1 | major | fixed | 看门狗 2568 于 15:58:44 正常上岗后无故消失（进程不在、无日志），服务存活但 G5 保护悬空——看门狗是最后一道防线且无自愈机制，死亡后保护空窗直到下次启动器运行 |
 | 2026-08-31 | [2026-08-31-validate-gate-missing-inject-guard](2026-08-31-validate-gate-missing-inject-guard.md) | DSH-ops/validate-plugins.mjs | major | fixed | 插件漏写 inject 声明时闸门 PASS 但服务加载失败：闸门 mock ctx 的服务属性是普通对象，不模拟 Cordis 运行时守卫，同类缺陷未来仍会漏检 |
 | 2026-08-31 | [2026-08-31-tool-python-exit-code-swallowed](2026-08-31-tool-python-exit-code-swallowed.md) | dsh-tool-python | minor | fixed | python 工具非零退出码全部显示为 [exit code: 1]：sys.exit(3) 实测显示 1，模型永远看不到脚本真实退出码 |
 | 2026-08-31 | [2026-08-31-service-silent-death-watchdog-pwsh-path](2026-08-31-service-silent-death-watchdog-pwsh-path.md) | G5 看门狗（watchdog-dsh.ps1 / start-dsh-web.ps1 Ensure-Watchdog） | major | fixed | DSH 服务静默死亡（非插件原因）：PID 21444 于 14:40:54 正常启动，14:51:02 启动器仍确认"已在运行"，随后进程消失——无 err.log 输出、无崩溃事件、无重启标记、dsh-switch.log 在 14:51:02 后零写入；启动器/闸门/演练保留区全部未触发（当时无演练插件残留，闸门 7/7）。 |

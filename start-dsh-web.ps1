@@ -80,12 +80,15 @@ function Ensure-Watchdog {
     }
   if ($running) { return }
   $pwsh = Resolve-PwshPath
-  $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
-    CommandLine = "`"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $ops 'watchdog-dsh.ps1')`""
-    CurrentDirectory = $ops
-  }
-  if ($r.ReturnValue -eq 0) { Write-Both "运行期看门狗已在岗 (pid $($r.ProcessId))" }
-  else { Write-Both "看门狗拉起失败 (ReturnValue $($r.ReturnValue))——服务运行中但无运行期保护" }
+  # Start-Process -WindowStyle Hidden（STARTF_USESHOWWINDOW）而非 WMI：
+  # WMI 的 Win32_Process.Create 不接受 STARTUPINFO，创建的控制台进程必弹黑窗，
+  # 用户误关 = 杀看门狗（2026-09-02 第 4 例无声死亡根因）。实测 Start-Process
+  # Hidden 拉起稳定无窗。Start-Process 子进程随本调用者为脱离宿主 Job 的
+  # 启动链 → 看门狗同样独立于宿主 Job。
+  $p = Start-Process -FilePath $pwsh -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', (Join-Path $ops 'watchdog-dsh.ps1') -WindowStyle Hidden -PassThru
+  Start-Sleep -Milliseconds 500
+  if ($p.HasExited) { Write-Both "看门狗拉起后立即退出 (exit $($p.ExitCode))——服务运行中但无运行期保护" }
+  else { Write-Both "运行期看门狗已在岗 (pid $($p.Id))" }
 }
 
 # 单实例保护：只匹配真正的 `pwsh/powershell -File start-dsh-web.ps1` 调用

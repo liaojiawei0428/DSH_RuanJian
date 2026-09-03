@@ -40,6 +40,21 @@ function Write-Log([string]$msg) {
   "[$([DateTime]::Now)] $msg" | Out-File $log -Append
 }
 
+# 隐藏自身控制台窗口（兜底保险）：不管由谁拉起、是否带 -WindowStyle Hidden，
+# 看门狗都不弹黑窗。2026-09-02 事故：黑窗被用户误关 = 杀看门狗（第 4 例
+# 无声死亡：2568/26636/27112/31652 均为"黑窗被关→进程被杀→保护悬空"）。
+# 注意：控制台窗口属于 conhost，不是 pwsh 的 MainWindow——必须用
+# GetConsoleWindow 拿真实句柄（MainWindowHandle 恒为 0，无效）。
+try {
+  $sig = '[DllImport("kernel32.dll")] public static extern IntPtr GetConsoleWindow(); '
+    + '[DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);'
+  Add-Type -Namespace 'Dsh' -Name 'DshWatchdogWin' -MemberDefinition $sig -ErrorAction Stop
+  $hwnd = [Dsh.DshWatchdogWin]::GetConsoleWindow()
+  if ($hwnd -ne [IntPtr]::Zero) { [Dsh.DshWatchdogWin]::ShowWindow($hwnd, 0) | Out-Null }
+} catch {
+  # 无控制台窗口（如已 Hidden 拉起）或 Add-Type 受限时静默忽略。
+}
+
 # 单实例：已有看门狗在跑则退出（每次启动器成功都会确保一个看门狗在岗）。
 $me = $PID
 $others = Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" |
@@ -84,14 +99,18 @@ function Get-BrokenPluginName {
 # 防循环护栏：拉起记录保留 1 小时窗口，窗口内已拉起 3 次仍不稳定 → 转人工。
 # （坏插件若"拉起后随即又崩"，新启动器的存活复核+G3 会先接手；本护栏兜住
 #  更换慢、反复崩的极端形态，防止看门狗变成无限重启机。）
+# 2026-09-02 修复：旧实现里 `Where-Object { $_ -gt $cutoff } | Set-Content`
+# 在管道为空（所有记录都已过期）时不清空文件，历史记录永远残留，预算被
+# 读成"1 小时内已 3 次"，服务真死时看门狗拒救退出（16:50 事故）。
 $restartsFile = Join-Path $ops 'watchdog-restarts.log'
 function Test-RestartBudget {
+  $cutoff = (Get-Date).AddHours(-1)
   if (Test-Path $restartsFile) {
-    $cutoff = (Get-Date).AddHours(-1)
-    Get-Content $restartsFile -ErrorAction SilentlyContinue |
+    $kept = @(Get-Content $restartsFile -ErrorAction SilentlyContinue |
       ForEach-Object { try { [datetime]$_ } catch { $null } } |
-      Where-Object { $_ -and $_ -gt $cutoff } |
-      Set-Content $restartsFile
+      Where-Object { $_ -and $_ -gt $cutoff })
+    # 显式以 kept 重写文件（空数组也清空），而非管道直通 Set-Content。
+    if ($kept.Count -gt 0) { $kept | Set-Content $restartsFile } else { Clear-Content $restartsFile }
   }
   $recent = @(Get-Content $restartsFile -ErrorAction SilentlyContinue | Where-Object { $_.Trim() })
   return ($recent.Count -lt 3)
@@ -99,6 +118,10 @@ function Test-RestartBudget {
 
 Write-Log "看门狗启动 (pid $me): 每 ${IntervalSeconds}s 查询 3080, 连续 $DebounceMisses 次无监听认定死亡"
 $misses = 0
+# 启动立即写一次心跳：health-check 用「进程在+心跳过期」判卡死，若首轮
+# 要等 30s 才写，期间会被误判为卡死而误杀（2026-09-02 9448 事故：启动
+# 12s 即被判 316s 过期遭 kill）。
+(Get-Date).ToString('o') | Set-Content $heartbeat
 try {
   while ($true) {
     Start-Sleep -Seconds $IntervalSeconds
@@ -134,19 +157,19 @@ try {
   }
   (Get-Date) | Out-File $restartsFile -Append
 
-  # WMI 一级拉起完整启动链（父进程 WmiPrvSE，不受任何 Job 对象管辖；
-  # 不带 -Restart——服务已死，启动器幂等语义直接启动）。启动成功后启动器
-  # 会拉起新看门狗，本实例随之让位退出。
+  # 拉起完整启动链（不带 -Restart——服务已死，启动器幂等语义直接启动）。
+  # 用 Start-Process -WindowStyle Hidden（STARTF_USESHOWWINDOW）而非 WMI：
+  # WMI 不接受 STARTUPINFO，创建的控制台进程必弹黑窗，用户误关 = 杀进程
+  # （2026-09-02 第 4 例无声死亡根因）。启动成功后启动器会拉起新看门狗，
+  # 本实例随之让位退出。
   $launcher = Join-Path $ops 'start-dsh-web.ps1'
   $pwsh = Resolve-PwshPath
-  $r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{
-    CommandLine = "`"$pwsh`" -NoProfile -ExecutionPolicy Bypass -File `"$launcher`""
-    CurrentDirectory = $ops
-  }
-  if ($r.ReturnValue -eq 0) {
-    Write-Log "已 WMI 拉起启动链 (执行者 pid $($r.ProcessId)), 本看门狗退出让位"
+  $p = Start-Process -FilePath $pwsh -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $launcher -WindowStyle Hidden -PassThru
+  Start-Sleep -Milliseconds 500
+  if ($p.HasExited) {
+    Write-Log "拉起启动链失败 (exit $($p.ExitCode)), 请人工启动 DSH"
   } else {
-    Write-Log "WMI 拉起失败 (ReturnValue $($r.ReturnValue)), 请人工启动 DSH"
+    Write-Log "已拉起启动链 (执行者 pid $($p.Id)), 本看门狗退出让位"
   }
   exit 0
 }
