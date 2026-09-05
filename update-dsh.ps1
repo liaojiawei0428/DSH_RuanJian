@@ -165,7 +165,7 @@ $newSha = git -C $repo rev-parse HEAD
 # (session 写锁, 提交 c58097a826), pnpm install 需 node-gyp 现场编译。
 # 缺工具链的机器提前给出可执行修复命令, 不必从 node-gyp 英文报错里猜
 # (见 buglog fs-ext-msvc-blocks-update)。
-$vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+$vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 $vcHint = '修复: winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"'
 if (-not (Test-Path $vswhere)) {
   Write-Both '警告: 未检测到 Visual Studio 安装器 (vswhere)。若新版 lockfile 含原生依赖 (如 fs-ext), pnpm install 会失败。'

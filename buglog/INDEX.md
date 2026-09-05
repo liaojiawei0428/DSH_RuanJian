@@ -1,12 +1,13 @@
 # BUG 记录索引
 
-共 128 条（fixed 115 / workaround 9 / open 4）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 129 条（fixed 115 / workaround 9 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
 | 2026-09-05 | [2026-09-05-web-auth-401-breaks-update-health-check](2026-09-05-web-auth-401-breaks-update-health-check.md) | update-dsh.ps1 | major | fixed | 升级 install/build/重启全部成功、服务实际已就绪，update-dsh.ps1 仍报"错误: 服务 120 秒内未就绪"并打印回滚提示，版本台账不写入（09/03 与 09/05 两轮均中招） |
 | 2026-09-05 | [2026-09-05-hub-manifest-hardcoded-paths](2026-09-05-hub-manifest-hardcoded-paths.md) | dsh-personal-hub | major | fixed | personal-hub 共享清单硬编码本机绝对路径，其他机器（同一套 DSH 但目录不同）拉取后执行 personal_hub_reapply 会用错误路径重写 profile，或 status 报假漂移 |
 | 2026-09-05 | [2026-09-05-fs-ext-msvc-blocks-update](2026-09-05-fs-ext-msvc-blocks-update.md) | update-dsh.ps1 / 主仓库依赖（fs-ext 原生模块） | major | fixed | update-dsh.ps1 每轮升级在"安装依赖 (pnpm install --frozen-lockfile)"阶段失败，日志"构建阶段失败: pnpm install 失败"，官方 0.1.3-alpha.1 无法上线 |
+| 2026-09-05 | [2026-09-05-0-1-3-alpha-1-gui-session-follow-session](2026-09-05-0-1-3-alpha-1-gui-session-follow-session.md) | Deepseek_DSH session-format-v0-to-v1（官方迁移链） | major | open | 升级 0.1.3-alpha.1 后点开其他工作区的老会话，GUI 加载即崩（服务端 session/follow 迁移链抛 SessionFormatError）；当前会话正常 |
 | 2026-09-04 | [2026-09-04-worldchat-send-id-field-400](2026-09-04-worldchat-send-id-field-400.md) | banmu-server fuwuqi.js | major | fixed | Godot 客户端世界聊天发送必 400 静默失败 |
 | 2026-09-04 | [2026-09-04-worldchat-history-unknown-column](2026-09-04-worldchat-history-unknown-column.md) | banmu-server fuwuqi.js | major | fixed | /world_chat/history 与 poll 返回 server_error 500 |
 | 2026-09-04 | [2026-09-04-worldchat-channel-type-fake-system](2026-09-04-worldchat-channel-type-fake-system.md) | banmu-server fuwuqi.js | critical | fixed | 未登录者可伪造系统公告横幅并污染 system 频道 |
