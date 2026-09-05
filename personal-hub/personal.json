@@ -42,6 +42,12 @@
       "patch": {
         "comment": "restart-resume: auto-continue the session after an AI-triggered service restart."
       }
+    },
+    {
+      "name": "dsh-server-ssh"
+    },
+    {
+      "name": "dsh-github-push"
     }
   ],
   "extraPatches": [

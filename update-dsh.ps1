@@ -161,6 +161,20 @@ if ($CheckOnly) { exit 0 }
 # 3.5 记录升级后的提交（用于版本台账; 无更新时与旧提交相同）。
 $newSha = git -C $repo rev-parse HEAD
 
+# 3.9 MSVC 工具链预检: 官方 0.1.3-alpha.1 起 lockfile 含原生依赖 fs-ext
+# (session 写锁, 提交 c58097a826), pnpm install 需 node-gyp 现场编译。
+# 缺工具链的机器提前给出可执行修复命令, 不必从 node-gyp 英文报错里猜
+# (见 buglog fs-ext-msvc-blocks-update)。
+$vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+$vcHint = '修复: winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"'
+if (-not (Test-Path $vswhere)) {
+  Write-Both '警告: 未检测到 Visual Studio 安装器 (vswhere)。若新版 lockfile 含原生依赖 (如 fs-ext), pnpm install 会失败。'
+  Write-Both $vcHint
+} elseif (-not (& $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null)) {
+  Write-Both '警告: 检测到 Visual Studio 但缺少 "Desktop development with C++" 工作负载, 原生依赖编译会失败。'
+  Write-Both $vcHint
+}
+
 # 4. 重新安装依赖。
 Push-Location $repo
 try {
@@ -265,7 +279,10 @@ while ((Get-Date) -lt $deadline) {
   try {
     # 回环目标必须绕过系统代理：代理对 127.0.0.1 返回 502 时，
     # 就绪的服务会被误判为未就绪，每次升级都以假失败告终。
-    $resp = Invoke-WebRequest -Uri 'http://127.0.0.1:3080' -UseBasicParsing -TimeoutSec 5 -NoProxy
+    # 官方 3e24087bfa（0.1.2-rc.1 起）给 web 加了认证门：根路径对未认证
+    # 探测返回 401。收到任何 HTTP 响应即证明服务就绪，必须用
+    # -SkipHttpErrorCheck（pwsh 7.2+）让非 2xx 不抛异常，否则永远假失败。
+    $resp = Invoke-WebRequest -Uri 'http://127.0.0.1:3080' -UseBasicParsing -TimeoutSec 5 -NoProxy -SkipHttpErrorCheck
     if ($resp.StatusCode -lt 500) { $healthy = $true; break }
   } catch { Start-Sleep -Seconds 3 }
 }

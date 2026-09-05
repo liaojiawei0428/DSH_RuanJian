@@ -40,6 +40,7 @@
 | pnpm | 任意（corepack 或 `npm i -g pnpm`） | `pnpm --version` |
 | PowerShell 7 | >= 7（**5.1 不可用**，见 BOM/GBK 事故）。标准位置安装（msi/winget）或 PATH 可用即零配置；便携/自定义安装位置见文末"已知差异" | `pwsh --version` |
 | Python 3 | >= 3.10（dsh-tool-python 需要） | `python --version` |
+| VS C++ 工具链 | **0.1.3-alpha.1 起必需**：官方新增原生依赖 fs-ext（session 写锁）在 `pnpm install` 时经 node-gyp 现场编译，Windows 需 MSVC。装免费 Build Tools 即可：`winget install Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"`（见 buglog `fs-ext-msvc-blocks-update`） | `& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64` |
 | 网络通道 | 能访问 GitHub 的通道：**系统代理模式 或 TUN/虚拟网卡模式（直连）均可**。脚本自动判定：系统代理启用（ProxyEnable=1）则用代理；否则探测 github.com 直连，TUN 模式直连可达即按直连继续 | 控制面板 → Internet 选项 → 代理；或 VPN 的 TUN 虚拟网卡开关 |
 
 ---

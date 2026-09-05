@@ -1,9 +1,42 @@
 # BUG 记录索引
 
-共 94 条（fixed 83 / workaround 7 / open 4）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 127 条（fixed 114 / workaround 9 / open 4）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
+| 2026-09-05 | [2026-09-05-web-auth-401-breaks-update-health-check](2026-09-05-web-auth-401-breaks-update-health-check.md) | update-dsh.ps1 | major | fixed | 升级 install/build/重启全部成功、服务实际已就绪，update-dsh.ps1 仍报"错误: 服务 120 秒内未就绪"并打印回滚提示，版本台账不写入（09/03 与 09/05 两轮均中招） |
+| 2026-09-05 | [2026-09-05-fs-ext-msvc-blocks-update](2026-09-05-fs-ext-msvc-blocks-update.md) | update-dsh.ps1 / 主仓库依赖（fs-ext 原生模块） | major | fixed | update-dsh.ps1 每轮升级在"安装依赖 (pnpm install --frozen-lockfile)"阶段失败，日志"构建阶段失败: pnpm install 失败"，官方 0.1.3-alpha.1 无法上线 |
+| 2026-09-04 | [2026-09-04-worldchat-send-id-field-400](2026-09-04-worldchat-send-id-field-400.md) | banmu-server fuwuqi.js | major | fixed | Godot 客户端世界聊天发送必 400 静默失败 |
+| 2026-09-04 | [2026-09-04-worldchat-history-unknown-column](2026-09-04-worldchat-history-unknown-column.md) | banmu-server fuwuqi.js | major | fixed | /world_chat/history 与 poll 返回 server_error 500 |
+| 2026-09-04 | [2026-09-04-worldchat-channel-type-fake-system](2026-09-04-worldchat-channel-type-fake-system.md) | banmu-server fuwuqi.js | critical | fixed | 未登录者可伪造系统公告横幅并污染 system 频道 |
+| 2026-09-04 | [2026-09-04-scene-quest-list-claim-before-dialog](2026-09-04-scene-quest-list-claim-before-dialog.md) | banmu-admin/web 文字版前端 | minor | fixed | 场景弹窗对话未看完时"此处事务"仍显示领取奖励且可直接点击领取 |
+| 2026-09-04 | [2026-09-04-quest-story-auto-complete-no-scene](2026-09-04-quest-story-auto-complete-no-scene.md) | banmu-server/quest_engine | major | fixed | 任务页满屏"可领取奖励"，未到场景的剧情任务（医馆夜话）也能领，主线链跳序 |
+| 2026-09-04 | [2026-09-04-quest-status-stale-no-dialog](2026-09-04-quest-status-stale-no-dialog.md) | banmu-admin/logic view + 文字版前端 | major | fixed | 文字版任务无剧情对话、状态陈旧不及时、场景挂载任务无法激活领取 |
+| 2026-09-04 | [2026-09-04-quest-objectives-json-string-misproject](2026-09-04-quest-objectives-json-string-misproject.md) | banmu-admin/logic view 投影 | critical | fixed | 文字版任务页所有进行中任务都显示"可领取奖励" |
+| 2026-09-04 | [2026-09-04-quest-four-state-consistency](2026-09-04-quest-four-state-consistency.md) | banmu-server 任务引擎 + banmu-admin 投影/前端 | major | fixed | 任务四态（接取/进行中/完成/领取）全链路双端不一致：剧情任务可绕过对白直接领取、投影判可领但引擎领取被拒、首条主线判定过宽 |
+| 2026-09-04 | [2026-09-04-quest-dialog-no-entry](2026-09-04-quest-dialog-no-entry.md) | banmu-admin/web 文字版前端 | major | fixed | 任务状态正确但剧情对话始终不显示 |
+| 2026-09-04 | [2026-09-04-quest-dialog-narrative-flow](2026-09-04-quest-dialog-narrative-flow.md) | banmu-admin/web 文字版前端 | minor | fixed | 剧情对白一次性全部列出，无逐句点击推进，接取/领取时序不符合游戏剧情逻辑 |
+| 2026-09-04 | [2026-09-04-npm-run-build-codegen-node-is-missing-fo](2026-09-04-npm-run-build-codegen-node-is-missing-fo.md) | banmu-admin-web | major | fixed | npm run build 报 Codegen node is missing for element/if/for node（vite:vue） |
+| 2026-09-04 | [2026-09-04-mysql2-bigint-string-status-broken](2026-09-04-mysql2-bigint-string-status-broken.md) | banmu-admin-server chat.service | major | fixed | 聊天时间显示 NaN、永久禁言被误判未禁言 |
+| 2026-09-04 | [2026-09-04-land-expand-nan-slot-key](2026-09-04-land-expand-nan-slot-key.md) | banmu-server/game_actions.js | major | fixed | 玩家土地状态 JSON 中出现 "NaN" 键（文字版空参数开垦触发） |
+| 2026-09-04 | [2026-09-04-guildchat-check-missing-gonghui-column](2026-09-04-guildchat-check-missing-gonghui-column.md) | banmu-server fuwuqi.js + game_actions.js | major | fixed | 公会频道发送校验引用不存在的 players.gonghui 列将 500 |
+| 2026-09-04 | [2026-09-04-game-server-deploy-path-mismatch](2026-09-04-game-server-deploy-path-mismatch.md) | DEPLOY · 部署脚本 | major | fixed | 上传 game_actions.js 到 /www/wwwroot/banmu-server/ 报 FileNotFoundError（目录不存在） |
+| 2026-09-04 | [2026-09-04-chat-panel-channel-cursor-pollution](2026-09-04-chat-panel-channel-cursor-pollution.md) | godot client world_chat_panel.gd | major | fixed | 私聊/公会停留期间世界消息丢失且世界消息误入当前频道 |
+| 2026-09-04 | [2026-09-04-bug](2026-09-04-bug.md) | banmu-admin-server | major | fixed | 剧本一键执行返回空壳或"剧本为空"，无法展示步骤级结果 |
+| 2026-09-04 | [2026-09-04-admin-guild-chat-missing-gonghui-column](2026-09-04-admin-guild-chat-missing-gonghui-column.md) | banmu-admin-server chat/players service | major | fixed | 后台公会聊天记录 500 或恒空 |
+| 2026-09-04 | [2026-09-04-admin-blacklist-jsarray-string-empty](2026-09-04-admin-blacklist-jsarray-string-empty.md) | banmu-admin-server players.service | major | fixed | players 黑名单接口返回空列表且移出失败，私聊误判拉黑拦截 |
+| 2026-09-03 | [2026-09-03-video-25-user-field-400](2026-09-03-video-25-user-field-400.md) | ai-video-script-app-server | critical | fixed | v3.1.0 部署后视频生成全部失败: "生成失败 [invalid_input] 视频请求参数无效" |
+| 2026-09-03 | [2026-09-03-verify-deploy-v30-grep-target](2026-09-03-verify-deploy-v30-grep-target.md) | scripts/verify-deploy.sh | minor | fixed | verify-deploy.sh 维度 30 grep 目标含不存在的 classifyAgnesVideoError 函数, 与源码不符 |
+| 2026-09-03 | [2026-09-03-pnpm-polluted-npm-node-modules](2026-09-03-pnpm-polluted-npm-node-modules.md) | banmu-admin-web-env | major | fixed | pnpm exec 命令在 banmu-admin/web 自动重装依赖：npm 安装的顶层包被移到 node_modules/.ignored，依赖版本集体漂移（element-plus 2.9.1→2.14.5），install 以 ERR_PNPM_IGNORED_BUILDS 失败。 |
+| 2026-09-03 | [2026-09-03-players-fetchrow-query-not-found](2026-09-03-players-fetchrow-query-not-found.md) | banmu-admin-server players-module | major | fixed | 后台玩家档案接口对存在的玩家返回 found=false，档案页无数据 |
+| 2026-09-03 | [2026-09-03-player-edit-nickname-write-wrong-key](2026-09-03-player-edit-nickname-write-wrong-key.md) | banmu-admin-server players-module | major | fixed | 后台编辑玩家昵称保存成功但客户端昵称不变 |
+| 2026-09-03 | [2026-09-03-panel-route-global-authguard-block-token](2026-09-03-panel-route-global-authguard-block-token.md) | banmu-admin-server players-module | major | fixed | 带 x-panel-token 调用玩家面板接口仍返回 401 Unauthorized |
+| 2026-09-03 | [2026-09-03-ok-false-wrapped-success](2026-09-03-ok-false-wrapped-success.md) | banmu-admin-server common | major | fixed | 后台玩家物品超扣/业务失败接口返回 code:0 成功，错误被静默吞掉 |
+| 2026-09-03 | [2026-09-03-husky-hook-wsl-sh-pwsh](2026-09-03-husky-hook-wsl-sh-pwsh.md) | environment | minor | workaround | DSH pwsh 会话 git commit 时 husky pre-commit 报 wsl.exe --list 错误提交失败 |
+| 2026-09-03 | [2026-09-03-deploy-v310-remote-path-flat](2026-09-03-deploy-v310-remote-path-flat.md) | ai-video-script-app-ops | minor | fixed | deploy_v310.py 首轮部署时远端报 "apps/server/deploy.sh: No such file or directory", deploy.sh 未执行 |
+| 2026-09-03 | [2026-09-03-deepseek-dead-code-cleanup](2026-09-03-deepseek-dead-code-cleanup.md) | ai-video-script-app-server | minor | fixed | 剧本生成链路无 DeepSeek 调用但 .env 残留 DEEPSEEK 配置 + errors.ts 残留 DEEPSEEK_API_ERROR 常量 |
+| 2026-09-03 | [2026-09-03-banmu-web-build-links-missing](2026-09-03-banmu-web-build-links-missing.md) | banmu-admin-web-env | minor | workaround | banmu-admin/web `npm run build` 报 Cannot find module node_modules\vue-tsc\bin\vue-tsc.js (MODULE_NOT_FOUND) |
+| 2026-09-03 | [2026-09-03-agnes-video-25-flash-migration](2026-09-03-agnes-video-25-flash-migration.md) | ai-video-script-app-server | major | fixed | 视频生成仍走 agnes-video-v2.0 旧协议, 需整体迁移到官方最新 agnes-video-2.5-flash |
 | 2026-09-03 | [2026-09-03-6-1-db-1-episode-episode-number](2026-09-03-6-1-db-1-episode-episode-number.md) | shipin-APP scriptService (剧集生成) | major | fixed | 小说分析后生成剧集剧本时只输出最后一集 (如"第 6 集"或"结局篇") 就完成, 完全没有第 1 集和中间集, DB 里该小说只有 1 条 episode 且 episode_number=总集数 |
 | 2026-09-02 | [2026-09-02-wmi-win32-process-create](2026-09-02-wmi-win32-process-create.md) | DSH-ops watchdog/watchdog-dsh.ps1+start-dsh-web.ps1+health-check.py | critical | fixed | WMI Win32_Process.Create 拉起的看门狗每次都弹黑窗，用户误关后看门狗被强杀（黑匣子无退出行） |
 | 2026-09-02 | [2026-09-02-web-deploy-dir-sop-mismatch](2026-09-02-web-deploy-dir-sop-mismatch.md) | web 部署 SOP (apps/web/scripts/deploy.sh + 部署手册) | major | workaround | v3.0.146 web 部署后公网 /assets/index-BlnZ4D8Y.js 返回 404（首页 200），新 bundle 未生效 |
