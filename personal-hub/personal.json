@@ -1,7 +1,5 @@
 {
-  "_comment": "dsh-personal-hub 唯一权威清单：个人 DSH 层的完整声明。官方升级后运行 personal_hub_reapply 工具按此清单重建 profile。字段：profileDir=web profile 目录；pluginsDir=自研插件根；officialBundles=官方基底层（reapply 时保持在 bundles 头部）；plugins[].name=插件包名（目录名=包名，id=去 dsh- 前缀）；plugins[].patch.config=cordis.patch.yml 覆盖；extraPatches=非插件绑定的部署覆盖。",
-  "profileDir": "C:/Users/Administrator/.dsh/profiles/web",
-  "pluginsDir": "E:/DSH/DSH-ops/plugins",
+  "_comment": "dsh-personal-hub 共享清单（git 同步，机器无关）：声明个人 DSH 层的组合意图——插件列表、官方基底层、patch 注释。机器特定值一律不放这里：profileDir/pluginsDir 由插件运行时派生（$DSH_HOME 或 ~/.dsh + 本仓 plugins 目录），绝对路径覆盖（pythonPath/pwshPath 等）写进同目录 personal.local.json（gitignore，每台机器自建）。字段：plugins[].name=插件包名（目录名=包名，id=去 dsh- 前缀）；plugins[].patch.config=cordis.patch.yml 覆盖；extraPatches=非插件绑定的部署覆盖。",
   "officialBundles": [
     "@deepseek-ai/dsh-base",
     "@deepseek-ai/dsh-web-app"
@@ -17,13 +15,7 @@
       }
     },
     {
-      "name": "dsh-tool-python",
-      "patch": {
-        "comment": "tool-python: pin the interpreter absolutely (3.14.6 via py launcher).",
-        "config": {
-          "pythonPath": "C:\\Users\\Administrator\\AppData\\Local\\Python\\pythoncore-3.14-64\\python.exe"
-        }
-      }
+      "name": "dsh-tool-python"
     },
     {
       "name": "dsh-bug-log"
@@ -48,16 +40,6 @@
     },
     {
       "name": "dsh-github-push"
-    }
-  ],
-  "extraPatches": [
-    {
-      "id": "pwsh-sandbox",
-      "name": "@deepseek-ai/dsh-pwsh-sandbox",
-      "config": {
-        "pwshPath": "E:\\GongJu\\7\\pwsh.exe"
-      },
-      "comment": "pwsh-sandbox: keep the official sandbox plugin pointed at the local pwsh 7 install."
     }
   ]
 }

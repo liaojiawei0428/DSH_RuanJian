@@ -34,6 +34,15 @@ const DEFAULT_MANIFEST = path.join(
   'personal.json',
 )
 
+/**
+ * Per-machine override file, gitignored, merged on top of the shared manifest.
+ * The shared `personal.json` carries only machine-independent intent (which
+ * plugins, which patch comments); this file carries what differs per box:
+ * absolute paths (profileDir/pluginsDir/pythonPath/pwshPath) and any
+ * machine-only entries. Absent on a fresh box → the defaults below apply.
+ */
+const LOCAL_FILE_NAME = 'personal.local.json'
+
 /** Profile files the hub owns. Backed up before any write (D4). */
 const PROFILE_FILES = ['package.json', 'cordis.patch.yml', 'cordis.yml']
 
@@ -148,7 +157,82 @@ function readManifest(manifestPath) {
   } catch (err) {
     throw new Error(`manifest is not valid JSON (${manifestPath}): ${err.message}`)
   }
+  // Layer 2: the per-machine override (gitignored). Invalid JSON fails loud.
+  const localPath = path.join(path.dirname(manifestPath), LOCAL_FILE_NAME)
+  if (existsSync(localPath)) {
+    let local
+    try {
+      local = JSON.parse(readFileSync(localPath, 'utf8'))
+    } catch (err) {
+      throw new Error(`local override is not valid JSON (${localPath}): ${err.message}`)
+    }
+    if (local !== null && typeof local === 'object' && !Array.isArray(local)) {
+      manifest = mergeOverlay(manifest, local)
+    }
+  }
+  // Layer 3: portable defaults for machine-specific roots, derived at runtime
+  // so a fresh box needs no manifest edit: profile from $DSH_HOME (or ~/.dsh),
+  // plugins from this plugin's own repo layout. Forward slashes keep the
+  // generated `link:` specs byte-identical with live package.json entries.
+  if (typeof manifest.profileDir !== 'string' || manifest.profileDir.length === 0) {
+    manifest.profileDir = toPosix(path.join(
+      typeof process.env.DSH_HOME === 'string' && process.env.DSH_HOME.length > 0 ? process.env.DSH_HOME : path.join(homedir(), '.dsh'),
+      'profiles',
+      'web',
+    ))
+  }
+  if (typeof manifest.pluginsDir !== 'string' || manifest.pluginsDir.length === 0) {
+    manifest.pluginsDir = toPosix(path.join(
+      path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url)))),
+      'plugins',
+    ))
+  }
   return manifest
+}
+
+/** Normalize Windows backslashes to forward slashes. */
+function toPosix(p) {
+  return p.replace(/\\/g, '/')
+}
+
+/** Plain-object test for the merge. */
+function isPlainObject(v) {
+  return v !== null && typeof v === 'object' && !Array.isArray(v)
+}
+
+/**
+ * Deep-merge an override document over a base object. `plugins` merges by
+ * `name` and `extraPatches` by `id` (existing entries patched, unknown ones
+ * appended); every other array or scalar is replaced wholesale; objects
+ * recurse. Overlay values always win for the keys they name.
+ */
+function mergeOverlay(base, overlay) {
+  const out = { ...base }
+  for (const [key, value] of Object.entries(overlay)) {
+    if (key === 'plugins' && Array.isArray(value) && Array.isArray(out.plugins)) {
+      out.plugins = mergeByKey(out.plugins, value, 'name')
+    } else if (key === 'extraPatches' && Array.isArray(value) && Array.isArray(out.extraPatches)) {
+      out.extraPatches = mergeByKey(out.extraPatches, value, 'id')
+    } else if (key === 'extraPatches' && Array.isArray(value)) {
+      out.extraPatches = value.map(entry => ({ ...entry }))
+    } else if (isPlainObject(value) && isPlainObject(out[key])) {
+      out[key] = mergeOverlay(out[key], value)
+    } else {
+      out[key] = value
+    }
+  }
+  return out
+}
+
+/** Merge two arrays of entries keyed by `key` (overlay patches or appends). */
+function mergeByKey(baseArr, overArr, key) {
+  const out = baseArr.map(entry => (isPlainObject(entry) ? { ...entry } : entry))
+  for (const over of overArr) {
+    const i = out.findIndex(entry => isPlainObject(entry) && entry[key] === over?.[key])
+    if (i >= 0) out[i] = mergeOverlay(out[i], over)
+    else out.push(over)
+  }
+  return out
 }
 
 /**

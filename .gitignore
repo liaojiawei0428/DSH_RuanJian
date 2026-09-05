@@ -6,3 +6,6 @@ watchdog.heartbeat
 
 # 依赖目录，不进仓库
 node_modules/
+
+# personal-hub 本机覆盖层：绝对路径等机器特定配置，每台机器自建，永不提交
+personal-hub/personal.local.json
