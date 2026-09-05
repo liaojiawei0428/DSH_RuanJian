@@ -1,13 +1,20 @@
 # BUG 记录索引
 
-共 129 条（fixed 115 / workaround 9 / open 5）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 136 条（fixed 120 / workaround 10 / open 6）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
 | 2026-09-05 | [2026-09-05-web-auth-401-breaks-update-health-check](2026-09-05-web-auth-401-breaks-update-health-check.md) | update-dsh.ps1 | major | fixed | 升级 install/build/重启全部成功、服务实际已就绪，update-dsh.ps1 仍报"错误: 服务 120 秒内未就绪"并打印回滚提示，版本台账不写入（09/03 与 09/05 两轮均中招） |
+| 2026-09-05 | [2026-09-05-v2-0-read-events-undefined](2026-09-05-v2-0-read-events-undefined.md) | dsh-session-persistence-jsonl（验证探针陷阱） | minor | fixed | 升级后深度审查探针显示迁移会话"v2 读 0 事件"且"结构校验全通过"，两者互相矛盾——最终定位为探针把 read() 的数组返回值当对象解构（.events 恒 undefined） |
+| 2026-09-05 | [2026-09-05-v0-migration-rejects-historical-shapes](2026-09-05-v0-migration-rejects-historical-shapes.md) | dsh-session-format-v0-to-v1 | critical | fixed | 升级 0.1.3-alpha.1 后点开历史会话无法加载历史数据；v0 会话日志 open(read) 时抛 SessionFormatUnsupportedError（"assistant/chunk N chunk replayState has unexpected member \"kind\"" 或 "subagent/descriptor N uses unsupported descriptor version 2"），49 个会话中 11 个被拒。 |
+| 2026-09-05 | [2026-09-05-tujian-plant-mapping-missing](2026-09-05-tujian-plant-mapping-missing.md) | banmu-server/game_actions.js + 后台 view | major | fixed | 图鉴永不解锁、精炼找不到图鉴、图鉴等级奖励从未生效 |
+| 2026-09-05 | [2026-09-05-origin-subagent-gui-session-agent-busy](2026-09-05-origin-subagent-gui-session-agent-busy.md) | Deepseek_DSH session navigation（GUI 会话打开链） | major | open | 点开子代理会话（origin=subagent 的列表条目）时 GUI 报错崩溃，服务端抛 session/agent-busy；与迁移器故障无关，迁移修复后仍存在 |
 | 2026-09-05 | [2026-09-05-hub-manifest-hardcoded-paths](2026-09-05-hub-manifest-hardcoded-paths.md) | dsh-personal-hub | major | fixed | personal-hub 共享清单硬编码本机绝对路径，其他机器（同一套 DSH 但目录不同）拉取后执行 personal_hub_reapply 会用错误路径重写 profile，或 status 报假漂移 |
 | 2026-09-05 | [2026-09-05-fs-ext-msvc-blocks-update](2026-09-05-fs-ext-msvc-blocks-update.md) | update-dsh.ps1 / 主仓库依赖（fs-ext 原生模块） | major | fixed | update-dsh.ps1 每轮升级在"安装依赖 (pnpm install --frozen-lockfile)"阶段失败，日志"构建阶段失败: pnpm install 失败"，官方 0.1.3-alpha.1 无法上线 |
-| 2026-09-05 | [2026-09-05-0-1-3-alpha-1-gui-session-follow-session](2026-09-05-0-1-3-alpha-1-gui-session-follow-session.md) | Deepseek_DSH session-format-v0-to-v1（官方迁移链） | major | open | 升级 0.1.3-alpha.1 后点开其他工作区的老会话，GUI 加载即崩（服务端 session/follow 迁移链抛 SessionFormatError）；当前会话正常 |
+| 2026-09-05 | [2026-09-05-farm-water-button-stateful](2026-09-05-farm-water-button-stateful.md) | banmu-admin/logic view + 文字版前端 | major | fixed | 田地浇水按钮一直显示，未按需浇水/除虫/收获状态隐藏 |
+| 2026-09-05 | [2026-09-05-dsh-ssh-github-token-client-bundle-hmr](2026-09-05-dsh-ssh-github-token-client-bundle-hmr.md) | dsh-server-ssh + dsh-github-push（client RPC 通道） | major | workaround | dsh 服务重启后，SSH 服务器面板与 GitHub 推送面板打开正常但内容全空（服务器列表/绑定/Token 显示"丢失"）；重建插件 client bundle 触发 HMR 重载后数据恢复 |
+| 2026-09-05 | [2026-09-05-cordis-inspect-query-input-client-provid](2026-09-05-cordis-inspect-query-input-client-provid.md) | harness-cordis-inspect-query | minor | open | cordis_inspect_query 带 input 参数调用任何 Client Provider 方法（如 Slots.listSubTree 带 {"root": ...}）一律被拒："input" must be an object；无 input 调用正常 |
+| 2026-09-05 | [2026-09-05-0-1-3-alpha-1-gui-session-follow-session](2026-09-05-0-1-3-alpha-1-gui-session-follow-session.md) | Deepseek_DSH session-format-v0-to-v1（官方迁移链） | major | fixed | 升级 0.1.3-alpha.1 后点开其他工作区的老会话，GUI 加载即崩（服务端 session/follow 迁移链抛 SessionFormatError）；当前会话正常 |
 | 2026-09-04 | [2026-09-04-worldchat-send-id-field-400](2026-09-04-worldchat-send-id-field-400.md) | banmu-server fuwuqi.js | major | fixed | Godot 客户端世界聊天发送必 400 静默失败 |
 | 2026-09-04 | [2026-09-04-worldchat-history-unknown-column](2026-09-04-worldchat-history-unknown-column.md) | banmu-server fuwuqi.js | major | fixed | /world_chat/history 与 poll 返回 server_error 500 |
 | 2026-09-04 | [2026-09-04-worldchat-channel-type-fake-system](2026-09-04-worldchat-channel-type-fake-system.md) | banmu-server fuwuqi.js | critical | fixed | 未登录者可伪造系统公告横幅并污染 system 频道 |
