@@ -1,9 +1,10 @@
 # BUG 记录索引
 
-共 152 条（fixed 133 / workaround 13 / open 6）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 153 条（fixed 134 / workaround 13 / open 6）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
+| 2026-09-08 | [2026-09-08-github-push-add-exit128-con-file](2026-09-08-github-push-add-exit128-con-file.md) | dsh-github-push | major | fixed | 推送插件报 git add -A 失败 (exit 128), 无法推送 |
 | 2026-09-07 | [2026-09-07-task-tab-triggers-scene-visit-msg](2026-09-07-task-tab-triggers-scene-visit-msg.md) | banmu-server/game_actions.js | major | fixed | 点击任务功能标签出现「进入场景」系统消息误提示 |
 | 2026-09-07 | [2026-09-07-seed-name-unidentified-plant-break](2026-09-07-seed-name-unidentified-plant-break.md) | banmu-server/data（plant_defs/item_defs/shop_items 内容） | major | fixed | 花坊/背包种子显示「物品#ID」、部分种子无法种植 |
 | 2026-09-07 | [2026-09-07-pnpm10-ignored-builds-blocks-build](2026-09-07-pnpm10-ignored-builds-blocks-build.md) | banmu-admin-web 构建流程 | major | workaround | pnpm build 报 ERR_PNPM_IGNORED_BUILDS（esbuild/vue-demi）后 exit 1，构建从未执行。 |
