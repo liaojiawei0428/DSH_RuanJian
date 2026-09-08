@@ -1,0 +1,10 @@
+# dsh-opencode-session-id bundle patch — inserts one host-plane row.
+#
+# STANDARD: rows that only CONSUME host services sit loose with no realm; a row
+# that PUBLISHES a service must sit behind an isolate realm in the mounting
+# composition (see PLUGIN-STANDARD.md P9).
+# Config goes in the deployment profile's cordis.patch.yml as an id-targeted
+# override of this row, never as an edit to this file.
+- insert:
+    - id: opencode-session-id
+      name: dsh-opencode-session-id

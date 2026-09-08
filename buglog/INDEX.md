@@ -1,14 +1,30 @@
 # BUG 记录索引
 
-共 136 条（fixed 120 / workaround 10 / open 6）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 152 条（fixed 133 / workaround 13 / open 6）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
+| 2026-09-07 | [2026-09-07-task-tab-triggers-scene-visit-msg](2026-09-07-task-tab-triggers-scene-visit-msg.md) | banmu-server/game_actions.js | major | fixed | 点击任务功能标签出现「进入场景」系统消息误提示 |
+| 2026-09-07 | [2026-09-07-seed-name-unidentified-plant-break](2026-09-07-seed-name-unidentified-plant-break.md) | banmu-server/data（plant_defs/item_defs/shop_items 内容） | major | fixed | 花坊/背包种子显示「物品#ID」、部分种子无法种植 |
+| 2026-09-07 | [2026-09-07-pnpm10-ignored-builds-blocks-build](2026-09-07-pnpm10-ignored-builds-blocks-build.md) | banmu-admin-web 构建流程 | major | workaround | pnpm build 报 ERR_PNPM_IGNORED_BUILDS（esbuild/vue-demi）后 exit 1，构建从未执行。 |
+| 2026-09-07 | [2026-09-07-pgrep-self-match-restart-ineffective](2026-09-07-pgrep-self-match-restart-ineffective.md) | banmu-admin/deploy/deploy_chat_nick_1_server.py | major | fixed | 部署重启后 admin 仍跑旧代码，新端点全部 404 Cannot POST |
+| 2026-09-07 | [2026-09-07-opencode-go-missing-session-id](2026-09-07-opencode-go-missing-session-id.md) | dsh-opencode-session-id（新插件，修复用） | critical | fixed | DSH 会话调用 opencode-go 套餐模型全部失败 400: {"type":"MissingSessionID","message":"Error from provider (Console Go): Request is missing x-opencode-session ..."}。所有 Go 套餐模型不可用，非 Go 套餐模型正常。 |
+| 2026-09-07 | [2026-09-07-no-ssh-client-paramiko-deploy](2026-09-07-no-ssh-client-paramiko-deploy.md) | 部署工具链 | major | workaround | 执行 ssh/scp 报命令不存在，dist 无法按原流程部署。 |
+| 2026-09-07 | [2026-09-07-modules-ts-edit-dropped-interface-field](2026-09-07-modules-ts-edit-dropped-interface-field.md) | edit-tool/banmu-admin-web-types | minor | fixed | modules.ts 中 ChatPunishment 接口丢失 ts 字段致类型破损（编译前发现） |
+| 2026-09-07 | [2026-09-07-mature-reminder-out-of-scope-500](2026-09-07-mature-reminder-out-of-scope-500.md) | banmu-server/game_actions.js | major | fixed | check_stage 接口 500 server_error（成熟提醒块引用块外变量） |
+| 2026-09-07 | [2026-09-07-exp-reward-render-broken](2026-09-07-exp-reward-render-broken.md) | banmu-server/sysmsg.js | major | fixed | 任务奖励消息显示「获得道具「」x70」（道具名空） |
+| 2026-09-07 | [2026-09-07-e-series-level-misallocation](2026-09-07-e-series-level-misallocation.md) | banmu-server/content_update.js | major | fixed | 早期剧情任务「渡口旧信」要求 28 级才能接取 |
+| 2026-09-07 | [2026-09-07-deploy-selftest-token-field](2026-09-07-deploy-selftest-token-field.md) | banmu-admin-deploy | minor | fixed | 部署自测脚本误判登录失败并因解包异常中断重启步骤 |
+| 2026-09-07 | [2026-09-07-deploy-import-time-after-use](2026-09-07-deploy-import-time-after-use.md) | banmu-admin/deploy/deploy_sysmsg_1_game.py | minor | fixed | 部署脚本重启段 NameError，游戏服 kill 后未拉起 |
+| 2026-09-07 | [2026-09-07-chat-order-double-reverse-fix](2026-09-07-chat-order-double-reverse-fix.md) | banmu-admin-web | major | fixed | 聊天板块最新消息显示在顶部、旧消息在底部 |
+| 2026-09-07 | [2026-09-07-broadcast-duplicate-chat-messages](2026-09-07-broadcast-duplicate-chat-messages.md) | banmu-admin/server/src/modules/chat/chat.service.ts | major | fixed | 发布一次系统公告，chat_messages 出现两条相同记录、系统频道重复显示 |
 | 2026-09-05 | [2026-09-05-web-auth-401-breaks-update-health-check](2026-09-05-web-auth-401-breaks-update-health-check.md) | update-dsh.ps1 | major | fixed | 升级 install/build/重启全部成功、服务实际已就绪，update-dsh.ps1 仍报"错误: 服务 120 秒内未就绪"并打印回滚提示，版本台账不写入（09/03 与 09/05 两轮均中招） |
 | 2026-09-05 | [2026-09-05-v2-0-read-events-undefined](2026-09-05-v2-0-read-events-undefined.md) | dsh-session-persistence-jsonl（验证探针陷阱） | minor | fixed | 升级后深度审查探针显示迁移会话"v2 读 0 事件"且"结构校验全通过"，两者互相矛盾——最终定位为探针把 read() 的数组返回值当对象解构（.events 恒 undefined） |
 | 2026-09-05 | [2026-09-05-v0-migration-rejects-historical-shapes](2026-09-05-v0-migration-rejects-historical-shapes.md) | dsh-session-format-v0-to-v1 | critical | fixed | 升级 0.1.3-alpha.1 后点开历史会话无法加载历史数据；v0 会话日志 open(read) 时抛 SessionFormatUnsupportedError（"assistant/chunk N chunk replayState has unexpected member \"kind\"" 或 "subagent/descriptor N uses unsupported descriptor version 2"），49 个会话中 11 个被拒。 |
 | 2026-09-05 | [2026-09-05-tujian-plant-mapping-missing](2026-09-05-tujian-plant-mapping-missing.md) | banmu-server/game_actions.js + 后台 view | major | fixed | 图鉴永不解锁、精炼找不到图鉴、图鉴等级奖励从未生效 |
 | 2026-09-05 | [2026-09-05-origin-subagent-gui-session-agent-busy](2026-09-05-origin-subagent-gui-session-agent-busy.md) | Deepseek_DSH session navigation（GUI 会话打开链） | major | open | 点开子代理会话（origin=subagent 的列表条目）时 GUI 报错崩溃，服务端抛 session/agent-busy；与迁移器故障无关，迁移修复后仍存在 |
+| 2026-09-05 | [2026-09-05-ok-true](2026-09-05-ok-true.md) | banmu-admin/web 精炼室面板 | major | fixed | 精炼室选中植物后显示"暂无精炼需求，请稍后重试"，无错误弹窗，但服务端直连调用返回 ok:true 与清单 |
+| 2026-09-05 | [2026-09-05-mysql-cli-json-path-players-tu-jian-bei-](2026-09-05-mysql-cli-json-path-players-tu-jian-bei-.md) | banmu-server 线上环境 | minor | workaround | mysql CLI 用 JSON path 复合访问 players 的 tu_jian/bei_bao JSON 列恒报 ERROR 3143/1054，无法 SQL 直读嵌套字段 |
 | 2026-09-05 | [2026-09-05-hub-manifest-hardcoded-paths](2026-09-05-hub-manifest-hardcoded-paths.md) | dsh-personal-hub | major | fixed | personal-hub 共享清单硬编码本机绝对路径，其他机器（同一套 DSH 但目录不同）拉取后执行 personal_hub_reapply 会用错误路径重写 profile，或 status 报假漂移 |
 | 2026-09-05 | [2026-09-05-fs-ext-msvc-blocks-update](2026-09-05-fs-ext-msvc-blocks-update.md) | update-dsh.ps1 / 主仓库依赖（fs-ext 原生模块） | major | fixed | update-dsh.ps1 每轮升级在"安装依赖 (pnpm install --frozen-lockfile)"阶段失败，日志"构建阶段失败: pnpm install 失败"，官方 0.1.3-alpha.1 无法上线 |
 | 2026-09-05 | [2026-09-05-farm-water-button-stateful](2026-09-05-farm-water-button-stateful.md) | banmu-admin/logic view + 文字版前端 | major | fixed | 田地浇水按钮一直显示，未按需浇水/除虫/收获状态隐藏 |
