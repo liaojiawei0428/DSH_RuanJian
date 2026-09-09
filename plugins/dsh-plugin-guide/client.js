@@ -1,24 +1,20 @@
 /**
  * dsh-plugin-guide — browser half (client bundle).
  *
- * Embeds Chinese plugin names and one-line purpose descriptions into the
- * official plugin inventory page: every card's expandable details block gains
- * two rows ("中文名" / "功能说明") that clone the official `dl.details` row
- * structure, so they inherit the page's own layout and theme. Plugins missing
- * from the built-in dictionary are left untouched.
- *
- * Mechanism: the official inventory tab renders through React with no slot
- * inside the card details, so this plugin watches the DOM with a
- * MutationObserver and appends the rows whenever a card's details block
- * (`li[data-plugin-module] … div[id^="plugin-details-"] dl`) appears — including
- * on every re-expand, because React rebuilds the details node each time. The
- * observer callback is coalesced into one microtask scan and rows are marked
- * via `dataset` so re-scans are no-ops.
+ * Renders a Chinese reference page for the plugin inventory: every entry in
+ * the built-in dictionary shows its module short name, Chinese name, and a
+ * one-line purpose. The page registers as its own tab inside the official
+ * Plugins settings section (`settings.plugins.tab`), so it needs no DOM
+ * observation, no hard-coded product selectors, and no document.body access —
+ * the shipped tab chrome, navigation, and theme own the presentation.
  *
  * This file is a hand-written client bundle in the platform's module-loader
- * format: `window.__ModuleLoader__.load({ id, factory })`. It consumes no
- * Cordis service, so `inject` stays empty and apply runs immediately; the
- * observer and its teardown belong to the plugin fiber through ctx.effect.
+ * format: `window.__ModuleLoader__.load({ id, factory })`, with the factory's
+ * `require` resolving platform seed words (react, …).
+ *
+ * Since DSH 0.1.2 the boot mounts every client plugin's apply concurrently, so
+ * the module declares `inject: ['slots']` — the loader holds our apply until
+ * the slots service is provided.
  */
 
 window.__ModuleLoader__.load({
@@ -27,6 +23,7 @@ window.__ModuleLoader__.load({
     const module = { exports: {} }
     const exports = module.exports
     Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' })
+    const React = require('react')
 
     /**
      * Chinese display dictionary keyed by the normalized module short name
@@ -196,73 +193,88 @@ window.__ModuleLoader__.load({
       'plugin-guide': ['插件说明', '本插件：在插件清单卡片里注入中文说明（个人插件）'],
     }
 
-    /** Normalize a module specifier the same way the official inventory tab does. */
-    function shortName(moduleName) {
-      const unscoped = moduleName.startsWith('@') ? moduleName.slice(moduleName.indexOf('/') + 1) : moduleName
-      return unscoped
-        .replace(/^cordis:/, '')
-        .replace(/^cordis-plugin-/, '')
-        .replace(/^dsh-(?:host-|client-)?/, '')
-    }
+    /** Official settings slot hosting one page inside the Plugins section. */
+    const SETTINGS_TAB = 'settings.plugins.tab'
+
+    const CSS = [
+      '.dspg-page { display: flex; flex-direction: column; gap: 12px; max-width: 860px; }',
+      '.dspg-head { display: flex; flex-direction: column; gap: 4px; }',
+      '.dspg-title { margin: 0; font-size: 14px; font-weight: 600; color: var(--dsw-alias-label-primary, #0f1115); }',
+      '.dspg-sub { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary, #81858c); }',
+      '.dspg-search { height: 30px; padding: 0 12px; border: 1px solid var(--dsw-alias-border-l2, rgba(0,0,0,0.1)); border-radius: 15px; background: transparent; color: var(--dsw-alias-label-primary, #0f1115); font-size: 13px; outline: none; }',
+      '.dspg-search:focus { border-color: var(--dsw-alias-border-l1, rgba(0,0,0,0.2)); }',
+      '.dspg-list { display: flex; flex-direction: column; gap: 2px; }',
+      '.dspg-item { display: grid; grid-template-columns: minmax(180px, 240px) minmax(120px, 180px) 1fr; gap: 12px; padding: 6px 10px; border-radius: 10px; font-size: 13px; line-height: 20px; }',
+      '.dspg-item:nth-child(odd) { background: var(--dsw-alias-interactive-bg-hover-solid, rgba(0,0,0,0.02)); }',
+      '.dspg-mod { color: var(--dsw-alias-label-tertiary, #81858c); font-family: var(--dsw-font-family-mono, ui-monospace, monospace); font-size: 12px; overflow: hidden; text-overflow: ellipsis; }',
+      '.dspg-name { color: var(--dsw-alias-label-primary, #0f1115); font-weight: 500; }',
+      '.dspg-desc { color: var(--dsw-alias-label-secondary, #61666b); }',
+      '.dspg-empty { padding: 20px 0; text-align: center; font-size: 13px; color: var(--dsw-alias-label-tertiary, #81858c); }',
+    ].join('\n')
 
     /**
-     * Append the two Chinese rows into one card's details list, cloning the
-     * official row structure (`div > dt + dd`) so the page's own layout and
-     * theme apply. Skips cards without a details block, entries not in the
-     * dictionary, and details blocks already enhanced (dataset marker).
+     * Chinese reference page: a searchable list of the built-in dictionary.
+     * @returns the page element.
      */
-    function enhanceCard(card) {
-      const moduleName = card.getAttribute('data-plugin-module')
-      if (moduleName === null || moduleName === '') return
-      const guide = GUIDE[shortName(moduleName)]
-      if (guide === undefined) return
-      const details = card.querySelector('div[id^="plugin-details-"] dl')
-      if (details === null || details.dataset.dspgGuide === '1') return
-      details.dataset.dspgGuide = '1'
+    function PluginGuidePage() {
+      const [query, setQuery] = React.useState('')
+      const q = query.trim().toLowerCase()
+      const entries = React.useMemo(() => {
+        const all = Object.entries(GUIDE)
+        if (q === '') return all
+        return all.filter(([key, value]) =>
+          key.toLowerCase().includes(q)
+          || String(value[0]).toLowerCase().includes(q)
+          || String(value[1]).toLowerCase().includes(q))
+      }, [q])
 
-      const nameRow = document.createElement('div')
-      const nameDt = document.createElement('dt')
-      nameDt.textContent = '中文名'
-      const nameDd = document.createElement('dd')
-      nameDd.textContent = guide[0]
-      nameRow.append(nameDt, nameDd)
+      const rows = entries.map(([key, value]) => React.createElement('div', { className: 'dspg-item', key },
+        React.createElement('span', { className: 'dspg-mod', title: key }, key),
+        React.createElement('span', { className: 'dspg-name' }, String(value[0])),
+        React.createElement('span', { className: 'dspg-desc' }, String(value[1])),
+      ))
 
-      const descRow = document.createElement('div')
-      const descDt = document.createElement('dt')
-      descDt.textContent = '功能说明'
-      const descDd = document.createElement('dd')
-      descDd.textContent = guide[1]
-      descRow.append(descDt, descDd)
-
-      details.append(nameRow, descRow)
+      return React.createElement('div', { className: 'dspg-page' },
+        React.createElement('div', { className: 'dspg-head' },
+          React.createElement('p', { className: 'dspg-title' }, '插件中文说明'),
+          React.createElement('p', { className: 'dspg-sub' }, `共 ${Object.keys(GUIDE).length} 条内置说明，输入关键字过滤。`),
+        ),
+        React.createElement('input', {
+          className: 'dspg-search',
+          type: 'search',
+          placeholder: '搜索插件名 / 中文名 / 功能说明…',
+          value: query,
+          onChange: (event) => setQuery(event.target.value),
+        }),
+        rows.length === 0
+          ? React.createElement('div', { className: 'dspg-empty' }, '没有匹配的条目')
+          : React.createElement('div', { className: 'dspg-list' }, rows),
+      )
     }
 
-    /** Enhance every inventory card currently in the document. */
-    function scanAll(root) {
-      const cards = root.querySelectorAll('li[data-plugin-module]')
-      for (const card of cards) enhanceCard(card)
-    }
-
-    let scanScheduled = false
-    /** Coalesce observer bursts into one microtask scan (also breaks the echo loop). */
-    function scheduleScan() {
-      if (scanScheduled) return
-      scanScheduled = true
-      queueMicrotask(() => {
-        scanScheduled = false
-        scanAll(document.body)
-      })
-    }
-
-    /** Browser-half entry: watch the page and enhance inventory cards as they render. */
+    /** Browser-half entry: register the Chinese reference page. */
     function apply(ctx) {
-      const observer = new MutationObserver(scheduleScan)
-      observer.observe(document.body, { childList: true, subtree: true })
-      ctx.effect(() => () => { observer.disconnect() }, 'dsh-plugin-guide: observer')
-      scanAll(document.body)
+      const slots = ctx.get('slots')
+      if (slots === undefined) {
+        console.warn('[dsh-plugin-guide] slots service unavailable despite inject declaration; page not registered')
+        return
+      }
+
+      const tag = document.createElement('style')
+      tag.dataset.plugin = 'dsh-plugin-guide'
+      tag.textContent = CSS
+      document.head.append(tag)
+      ctx.effect(() => () => { tag.remove() }, 'dsh-plugin-guide: styles')
+
+      slots.inject(SETTINGS_TAB, () => slots.register({
+        name: SETTINGS_TAB,
+        id: 'plugin-guide-zh',
+        order: 20,
+        label: '中文说明',
+      }, PluginGuidePage))
     }
 
-    exports.inject = []
+    exports.inject = ['slots']
     exports.apply = apply
     return module.exports
   },

@@ -130,7 +130,35 @@ function mockContext(assertSchema, injectNames) {
   const ctx = new Proxy({}, {
     get(_target, prop) {
       const name = String(prop)
-      if (name === 'get') return _serviceName => undefined
+      if (name === 'get') {
+        // Real `ctx.get` reads the global service store and returns undefined
+        // for a service that is not mounted. Mirror that against the mock
+        // store so a plugin's optional-service branch is exercised here
+        // instead of being skipped by an unconditional undefined.
+        return serviceName => services[String(serviceName)]
+      }
+      if (name === 'inject') {
+        // Real `ctx.inject(names, callback)` runs the callback once every
+        // named service is present, with a context where those services are
+        // declared (the official lazy-injection pattern for optional
+        // services). Mirror that: when the mocks cover the names, invoke the
+        // callback with the names temporarily declared.
+        return (names, callback) => {
+          const list = (Array.isArray(names) ? names : [names]).map(String)
+          const ready = list.every(serviceName => services[serviceName] !== undefined)
+          if (!ready) return () => {}
+          const added = []
+          for (const serviceName of list) {
+            if (!declared.has(serviceName)) { declared.add(serviceName); added.push(serviceName) }
+          }
+          try {
+            callback(ctx)
+          } finally {
+            for (const serviceName of added) declared.delete(serviceName)
+          }
+          return () => {}
+        }
+      }
       if (name === 'effect') {
         // The registration-time effect idiom (host halves wrap route/
         // subscription registrations in ctx.effect(() => disposer)); the mock

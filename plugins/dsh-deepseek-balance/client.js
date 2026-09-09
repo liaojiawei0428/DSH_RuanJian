@@ -1,10 +1,10 @@
 /**
  * dsh-deepseek-balance — browser half (client bundle).
  *
- * Registers the balance capsule into the session header utilities row
- * (`conversation.session.header.utilities`, the same additive list slot that
- * hosts the Session log export button) and fetches the Host route
- * `/api/dsh/deepseek-balance` for the balance data.
+ * Registers the balance capsule into the personal plugin toolbar row
+ * (`dsh.personal.bar`, the wrapping row hosted by dsh-personal-hub below the
+ * composer card, separate from the shipped header buttons) and fetches the
+ * Host route `/api/dsh/deepseek-balance` for the balance data.
  *
  * This file is a hand-written client bundle in the platform's module-loader
  * format: `window.__ModuleLoader__.load({ id, factory })`, with the factory's
@@ -217,12 +217,12 @@ window.__ModuleLoader__.load({
       document.head.append(tag)
       ctx.effect(() => () => { tag.remove() }, 'dsh-deepseek-balance: styles')
 
-      slots.inject('conversation.session.header.utilities', () => slots.register(
-        { name: 'conversation.session.header.utilities', id: 'deepseek-balance', order: 100, label: 'DeepSeek 余额' },
+      slots.inject('dsh.personal.bar', () => slots.register(
+        { name: 'dsh.personal.bar', id: 'deepseek-balance', order: 100, label: 'DeepSeek 余额' },
         BalanceHeader,
       ))
-      slots.inject('conversation.session.header.utilities', () => slots.register(
-        { name: 'conversation.session.header.utilities', id: 'deepseek-balance-version', order: 101, label: 'DSH 版本' },
+      slots.inject('dsh.personal.bar', () => slots.register(
+        { name: 'dsh.personal.bar', id: 'deepseek-balance-version', order: 101, label: 'DSH 版本' },
         VersionHeader,
       ))
     }

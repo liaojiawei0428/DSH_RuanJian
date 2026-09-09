@@ -1,6 +1,6 @@
 # dsh-deepseek-balance
 
-DSH 系统组件：在会话头部工具条（Session log 导出按钮旁）显示两个胶囊：
+DSH 系统组件：在个人插件工具栏（输入卡下方横排一行，`dsh.personal.bar`）显示两个胶囊：
 
 1. **余额胶囊**：DeepSeek 账户余额，点击立即刷新，**每 5 分钟自动静默刷新**，
    余额 ≤ ¥10 橙色警示，悬停显示明细。
@@ -24,9 +24,9 @@ DSH 系统组件：在会话头部工具条（Session log 导出按钮旁）显�
      `DSH_UPDATE_SOURCE=auto` 运行（台账记"自动更新"），自带全套守卫：
      干净检查/备份/构建/组合预检/插件闸门/健康检查；窗口未能打开时向胶囊
      如实返回失败（不静默）。
-- **浏览器半端**（`client.js`）：手写 client bundle，注册
-  `conversation.session.header.utilities` 两个胶囊（余额 order 100、
-  版本 order 101），余额 5 分钟轮询、版本 5 分钟轮询（host 控制真实检查节奏）。
+- **浏览器半端**（`client.js`）：手写 client bundle，注册到个人插件工具栏子槽位
+  `dsh.personal.bar`（dsh-personal-hub 在输入卡下方托管的横排一行）两个胶囊
+  （余额 order 100、版本 order 101），余额 5 分钟轮询、版本 5 分钟轮询（host 控制真实检查节奏）。
 
 ## 配置
 

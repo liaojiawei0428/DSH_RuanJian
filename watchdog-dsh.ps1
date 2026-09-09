@@ -1,4 +1,4 @@
-﻿param(
+param(
   # 轮询周期与去抖计数可调，默认 30 秒 x 2 = 连续 60 秒无监听才认定死亡。
   [int]$IntervalSeconds = 30,
   [int]$DebounceMisses = 2
@@ -91,7 +91,11 @@ function Get-BrokenPluginName {
     if ($line -match 'profile bundle ["]?([^"\s]+)["]? declares') { return $Matches[1] }
   }
   foreach ($line in $tail) {
-    if ($line -match 'plugins[\\/](dsh-[A-Za-z0-9-]+)[\\/]') { return $Matches[1] }
+    # 只从真正的异常栈行提取插件路径（错误特征行），避免普通日志里恰好
+    # 出现的 plugins\dsh-xxx 路径被误判为肇事者（2026-09-08 事故：健康插件
+    # 因 err.log 陈旧痕迹被误摘）。
+    if ($line -match 'plugins[\\/](dsh-[A-Za-z0-9-]+)[\\/]' -and
+        $line -match 'Error|error|at |throw|failed|FAILED|Cannot|Unhandled') { return $Matches[1] }
   }
   return $null
 }
@@ -138,7 +142,30 @@ try {
 
   # 死亡确认。去抖窗口已滤掉 -Restart 的正常端口空窗（杀旧→拉新 ≤35s）。
   Write-Log '服务死亡确认 (连续无监听超过去抖窗口), 进入自动恢复'
-  $broken = Get-BrokenPluginName
+  # 主动重启窗口豁免：request_restart（dsh-restart-resume 插件）在停服前写入
+  # ~/.dsh/restart-resume.json 续聊标记；看门狗把它当成"本就在进行的重启"而非
+  # 意外死亡——跳过肇事插件隔离（避免从 err.log 陈旧痕迹误摘健康插件，
+  # 2026-09-08 事故：重启窗口内误摘 dsh-github-push / dsh-server-ssh），
+  # 直接让位给启动链。标记由新进程 boot 消费后删除。
+  $rerunHome = $env:DSH_HOME
+  if (-not $rerunHome -or $rerunHome.Length -eq 0) { $rerunHome = Join-Path $env:USERPROFILE '.dsh' }
+  $rerunMarker = Join-Path $rerunHome 'restart-resume.json'
+  if (Test-Path $rerunMarker) {
+    try {
+      $markerAge = (Get-Date) - (Get-Item $rerunMarker).LastWriteTime
+      if ($markerAge.TotalMinutes -lt 30) {
+        Write-Log '检测到 restart-resume 续聊标记 (主动重启窗口), 跳过肇事插件隔离, 直接拉起启动链'
+        $broken = $null
+      } else {
+        Remove-Item $rerunMarker -Force -ErrorAction SilentlyContinue
+        $broken = Get-BrokenPluginName
+      }
+    } catch {
+      $broken = Get-BrokenPluginName
+    }
+  } else {
+    $broken = Get-BrokenPluginName
+  }
   if ($broken) {
     Write-Log "从 dsh-web.err.log 定位到肇事插件 $broken, 自动移出 bundles (文件与 link 保留)"
     # node 定位链：PATH 优先，Program Files 兜底（与 Resolve-PwshPath 同纪律，

@@ -16,7 +16,7 @@
  *    full-file replace, never line splicing).
  */
 
-import { spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, copyFileSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import path from 'node:path'
@@ -26,6 +26,9 @@ export const name = 'personal-hub'
 
 /** Hard service dependencies only; see P3 before adding one. */
 export const inject = ['tools']
+
+/** Package-private Client→Host RPC channel for the settings page. */
+const RPC_CHANNEL = '/dsh-personal-hub'
 
 /** Default manifest location: `<ops root>/personal-hub/personal.json`. */
 const DEFAULT_MANIFEST = path.join(
@@ -139,12 +142,63 @@ export function apply(ctx, config = {}) {
     },
     async execute() {
       try {
-        return reapply(manifestPath)
+        return await reapply(manifestPath)
       } catch (err) {
         return { ok: false, actions: [], error: err.message }
       }
     },
   }), 'register personal_hub_reapply')
+
+  // Package-private RPC for the browser half's settings page. `connection` is
+  // an optional service (P3), but `ctx.get` does NOT wait for a service: at
+  // apply time the connection row may still be mounting, and a plain read
+  // would then skip registration forever (observed as HTTP 405 on the page).
+  // The official lazy-injection pattern avoids that: try the direct read, and
+  // when it is absent let `ctx.inject` run the registration once the service
+  // appears (and tear it down with the fiber when it goes away).
+  const registerRpcChannel = (connectionCtx) => {
+    // `ctx.get` (not the property proxy) keeps this readable in both the real
+    // runtime and the pre-flight gate's mock, and needs no inject declaration.
+    const connection = connectionCtx.get('connection')
+    if (connection === undefined) return
+    connectionCtx.effect(() => connection.rpc.handle(RPC_CHANNEL, async (endpoint, payload) => {
+      void payload
+      try {
+        switch (endpoint) {
+          case 'status': {
+            const report = statusReport(manifestPath)
+            let manifest
+            try {
+              manifest = readManifest(manifestPath)
+            } catch {
+              manifest = undefined
+            }
+            const plugins = manifest === undefined ? [] : manifest.plugins.map(p => ({
+              name: p.name,
+              hasPatch: p.patch !== undefined,
+            }))
+            const official = manifest === undefined ? [] : manifest.officialBundles ?? []
+            const extras = manifest === undefined ? [] : manifest.extraPatches ?? []
+            return { ok: true, value: { ...report, plugins, official, extras } }
+          }
+          case 'validate': return { ok: true, value: validateManifest(manifestPath) }
+          case 'reapply': return { ok: true, value: await reapply(manifestPath) }
+          default:
+            return {
+              ok: false,
+              error: { code: 'UNKNOWN_ENDPOINT', message: `未知端点 ${endpoint}`, details: {} },
+            }
+        }
+      } catch (err) {
+        return {
+          ok: false,
+          error: { code: 'INTERNAL', message: err instanceof Error ? err.message : String(err), details: {} },
+        }
+      }
+    }), 'personal-hub: rpc channel')
+  }
+  if (ctx.get('connection') === undefined) ctx.inject(['connection'], registerRpcChannel)
+  else registerRpcChannel(ctx)
 }
 
 /** Read + structurally validate the manifest; throws with a readable message on failure. */
@@ -481,8 +535,47 @@ function backupProfile(profileDir) {
   return backupDir
 }
 
+/**
+ * Run `pnpm install` in the profile without blocking the event loop. A
+ * synchronous child would freeze every Session and the web server for the
+ * install's whole duration, which is unacceptable for a click-driven settings
+ * action or a model tool call.
+ * @param profileDir - the web profile directory.
+ * @returns `{ status, stdout, stderr }` or `{ error }` when the child cannot start.
+ */
+function runPnpmInstall(profileDir) {
+  return new Promise((resolve) => {
+    const child = spawn('pnpm install --reporter append-only', {
+      cwd: profileDir,
+      env: { ...process.env },
+      // The command string is a hardcoded literal; a shell is the portable way
+      // to reach pnpm.cmd on Windows (post CVE-2024-27980 a bare spawn of a
+      // .cmd fails with EINVAL).
+      shell: true,
+    })
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    const finish = (value) => {
+      if (settled) return
+      settled = true
+      clearTimeout(timer)
+      resolve(value)
+    }
+    const timer = setTimeout(() => {
+      child.kill()
+      finish({ error: new Error(`pnpm install 超时（${INSTALL_TIMEOUT_MS}ms）`) })
+    }, INSTALL_TIMEOUT_MS)
+    timer.unref?.()
+    child.stdout?.on('data', (chunk) => { stdout += String(chunk) })
+    child.stderr?.on('data', (chunk) => { stderr += String(chunk) })
+    child.on('error', (error) => { finish({ error }) })
+    child.on('close', (status) => { finish({ status, stdout, stderr }) })
+  })
+}
+
 /** One reapply pass: validate → backup → rewrite → pnpm install. */
-function reapply(manifestPath) {
+async function reapply(manifestPath) {
   const actions = []
   const validation = validateManifest(manifestPath)
   if (!validation.ok) return { ok: false, actions, error: `清单校验未通过：\n${validation.errors.join('\n')}` }
@@ -504,16 +597,7 @@ function reapply(manifestPath) {
   atomicWrite(patchPath, rebuildPatchYaml(patchText, manifest))
   actions.push('cordis.patch.yml 托管条目已按清单重生成（官方块原样保留）')
 
-  const install = spawnSync('pnpm install --reporter append-only', {
-    cwd: profileDir,
-    encoding: 'utf8',
-    timeout: INSTALL_TIMEOUT_MS,
-    env: { ...process.env },
-    // The command string is a hardcoded literal; a shell is the portable way
-    // to reach pnpm.cmd on Windows (post CVE-2024-27980 a bare spawnSync of a
-    // .cmd fails with EINVAL).
-    shell: true,
-  })
+  const install = await runPnpmInstall(profileDir)
   if (install.error !== undefined) {
     return { ok: false, actions, error: `pnpm install 启动失败：${install.error.message}` }
   }

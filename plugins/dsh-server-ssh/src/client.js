@@ -17,7 +17,7 @@
 const React = require('react')
 const ReactDOM = require('react-dom')
 
-const SLOT_NAME = 'conversation.session.header.utilities'
+const SLOT_NAME = 'dsh.personal.bar'
 const RPC_CHANNEL = '/dsh-server-ssh'
 const POLL_INTERVAL_MS = 5000
 

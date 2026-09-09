@@ -1,10 +1,18 @@
 # BUG 记录索引
 
-共 153 条（fixed 134 / workaround 13 / open 6）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
+共 161 条（fixed 141 / workaround 13 / open 7）。检索用 bug_search，统计用 bug_stats；本文件由 bug_report 自动重建，勿手编辑。
 
 | 日期 | 记录 | 组件 | 严重度 | 状态 | 症状 |
 |---|---|---|---|---|---|
+| 2026-09-08 | [2026-09-08-transport-failure-for-dsh-personal-hub-s](2026-09-08-transport-failure-for-dsh-personal-hub-s.md) | dsh-personal-hub + validate-plugins 闸门 | major | fixed | 「个人部署层」设置页点击按钮报 `transport failure for /dsh-personal-hub/status: HTTP 405`（RPC 通道未注册） |
+| 2026-09-08 | [2026-09-08-request-restart-err-log-10-32-dsh-github](2026-09-08-request-restart-err-log-10-32-dsh-github.md) | DSH-ops 看门狗 G5（watchdog-dsh.ps1）+ dsh-restart-resume | major | open | request_restart 重启窗口内看门狗误判服务死亡，从 err.log 陈旧痕迹误定位并自动隔离健康插件（10:32 摘 dsh-github-push、11:33 摘 dsh-server-ssh），SSH/GitHub 面板被移出 profile bundles |
+| 2026-09-08 | [2026-09-08-request-restart-err-log-10-32-dsh-github-2](2026-09-08-request-restart-err-log-10-32-dsh-github-2.md) | DSH-ops 看门狗 G5（watchdog-dsh.ps1）+ dsh-restart-resume | major | fixed | request_restart 重启窗口内看门狗误判服务死亡，从 err.log 陈旧痕迹误定位并自动隔离健康插件（10:32 摘 dsh-github-push、11:33 摘 dsh-server-ssh），SSH/GitHub 面板被移出 profile bundles |
+| 2026-09-08 | [2026-09-08-pi-ai-0.85-lost-free-models-kills-namespace](2026-09-08-pi-ai-0.85-lost-free-models-kills-namespace.md) | llm-pi-ai / settings 集成（pi-ai 0.85.1 升级回归） | critical | fixed | 官方仓库更新（09-08 ff 到 c389f96bf3，含 pi-ai 0.84→0.85.1 升级）后，DSH 模型页无法添加任何第三方模型（llm-pi-ai 命名空间消失），存量 pi-ai 路由（unlimitds/bai/agnes/opencode-go/opencode）全部失效：llm/listProviders 只剩 deepseek-official。更新当时三次启动失败（未就绪）被自动隔离误伤 dsh-server-ssh。 |
+| 2026-09-08 | [2026-09-08-personal-hub-reapply-dsh-web-pnpm-instal](2026-09-08-personal-hub-reapply-dsh-web-pnpm-instal.md) | dsh-personal-hub | major | fixed | personal_hub_reapply 执行期间整个 DSH 服务冻结（所有会话与 Web 界面无响应），直到 pnpm install 结束 |
 | 2026-09-08 | [2026-09-08-github-push-add-exit128-con-file](2026-09-08-github-push-add-exit128-con-file.md) | dsh-github-push | major | fixed | 推送插件报 git add -A 失败 (exit 128), 无法推送 |
+| 2026-09-08 | [2026-09-08-dsh-locale-language-dsh-ui-ui](2026-09-08-dsh-locale-language-dsh-ui-ui.md) | dsh-locale-language | minor | fixed | dsh-locale-language 的"跟随 DSH UI 语言"失效：UI 切英文后模型系统提示仍为中文指令 |
+| 2026-09-08 | [2026-09-08-connection-rpc-handle-webserver-inject-regression](2026-09-08-connection-rpc-handle-webserver-inject-regression.md) | packages/client/connection（上游回归）/ dsh-server-ssh | critical | fixed | DSH 重启失败：服务绑定 3080 后立即死亡，3+3 次尝试全部失败（G3 自动隔离误伤 dsh-github-push 两次，服务最终宕机）。err.log 报：failed to apply loader entry server-ssh (dsh-server-ssh): cannot get property "webServer" without inject。 |
+| 2026-09-08 | [2026-09-08-0-1-3-alpha-2-10-32-11-53-10-bundles-ssh](2026-09-08-0-1-3-alpha-2-10-32-11-53-10-bundles-ssh.md) | DSH-ops 看门狗 G5（watchdog-dsh.ps1）+ 上游 connection 回归联动 | major | fixed | 0.1.3-alpha.2 更新后服务"就绪即崩溃"连锁（10:32-11:53 崩溃+误隔离交替），10 插件反复被摘出 bundles，SSH/GitHub 面板不可用 |
 | 2026-09-07 | [2026-09-07-task-tab-triggers-scene-visit-msg](2026-09-07-task-tab-triggers-scene-visit-msg.md) | banmu-server/game_actions.js | major | fixed | 点击任务功能标签出现「进入场景」系统消息误提示 |
 | 2026-09-07 | [2026-09-07-seed-name-unidentified-plant-break](2026-09-07-seed-name-unidentified-plant-break.md) | banmu-server/data（plant_defs/item_defs/shop_items 内容） | major | fixed | 花坊/背包种子显示「物品#ID」、部分种子无法种植 |
 | 2026-09-07 | [2026-09-07-pnpm10-ignored-builds-blocks-build](2026-09-07-pnpm10-ignored-builds-blocks-build.md) | banmu-admin-web 构建流程 | major | workaround | pnpm build 报 ERR_PNPM_IGNORED_BUILDS（esbuild/vue-demi）后 exit 1，构建从未执行。 |

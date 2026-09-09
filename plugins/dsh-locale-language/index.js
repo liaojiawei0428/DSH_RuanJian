@@ -1,9 +1,12 @@
 /**
  * dsh-locale-language — a zero-dependency host plugin.
  *
- * Registers a GLOBAL system-prompt section (order -50, before the deployment
- * persona) and a runtime context that both carry one instruction: think
- * (chain of thought) and reply in the language of the DSH UI locale.
+ * Registers a GLOBAL system-prompt section (order -50, ahead of the
+ * deployment persona prefix) and a runtime context that both carry one
+ * instruction: think (chain of thought) and reply in the language of the DSH
+ * UI locale. The section order predates DSH 0.1.3-alpha.2's renumbered order
+ * table (`DEPLOYMENT_PERSONA_PREFIX` 0 … `HARNESS_SOURCE` 10000); the negative
+ * value keeps the language rule first, which is the intended position.
  *
  * The locale is read live at every prompt assembly from the host settings
  * namespace `locale` (preference `zh` | `en`), so switching the UI language
@@ -21,13 +24,18 @@ const TEXT = {
 }
 
 /**
- * Resolve the active UI locale as the host knows it.
+ * Resolve the active UI locale as the host knows it. `settings` is an
+ * optional service read through `ctx.get` (P3): declaring it in `inject`
+ * would hold the whole plugin pending whenever settings is absent, and
+ * reading `ctx.settings` without the declaration trips the Cordis Guard
+ * (`cannot get property "settings" without inject`) — which this try/catch
+ * would then swallow into the fallback locale.
  * @param ctx - the mounting Cordis context.
  * @returns `'zh'` or `'en'`.
  */
 function activeLocale(ctx) {
   try {
-    const section = ctx.settings?.get?.('locale')
+    const section = ctx.get('settings')?.get?.('locale')
     const preference = section?.preference
     if (preference === 'en' || preference === 'zh') return preference
     return FALLBACK_LOCALE

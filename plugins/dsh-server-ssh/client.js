@@ -26,7 +26,7 @@ __export(client_exports, {
 module.exports = __toCommonJS(client_exports);
 var React = require("react");
 var ReactDOM = require("react-dom");
-var SLOT_NAME = "conversation.session.header.utilities";
+var SLOT_NAME = "dsh.personal.bar";
 var RPC_CHANNEL = "/dsh-server-ssh";
 var POLL_INTERVAL_MS = 5e3;
 var h = React.createElement;
